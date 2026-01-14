@@ -70,6 +70,21 @@ export const refreshAccessToken = () => {
     return apiClient.post('/users/refresh-token');
 };
 
+// Verify email with code
+export const verifyEmail = (data) => {
+    return apiClient.post('/users/verify-email', data);
+};
+
+// Forgot password - send verification code
+export const forgotPassword = (data) => {
+    return apiClient.post('/users/forgot-password', data);
+};
+
+// Reset password with code
+export const resetPassword = (data) => {
+    return apiClient.post('/users/reset-password', data);
+};
+
 // Change current password (secured)
 export const changeCurrentPassword = (passwordData) => {
     return apiClient.post('/users/change-password', passwordData);
@@ -192,6 +207,11 @@ export const updateTweet = (tweetId, tweetData) => {
 // Delete tweet (secured)
 export const deleteTweet = (tweetId) => {
     return apiClient.delete(`/tweets/${tweetId}`);
+};
+
+// Get all tweets (secured)
+export const getAllTweets = () => {
+    return apiClient.get('/tweets');
 };
 
 // ============ PLAYLIST APIs ============

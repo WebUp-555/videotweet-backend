@@ -64,7 +64,7 @@ export default function Signup() {
 
     try {
       const data = new FormData();
-      data.append('fullName', formData.fullName);
+      data.append('fullname', formData.fullName);
       data.append('username', formData.username);
       data.append('email', formData.email);
       data.append('password', formData.password);
@@ -75,7 +75,7 @@ export default function Signup() {
 
       const response = await registerUser(data);
       if (response.data.success) {
-        navigate('/login');
+        navigate('/verify-email', { state: { email: formData.email } });
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');

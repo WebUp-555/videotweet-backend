@@ -4,7 +4,7 @@ import { loginUser } from '../api/api';
 
 export default function Login() {
   const [formData, setFormData] = useState({
-    email: '',
+    identifier: '', // Can be email or username
     password: '',
   });
   const [error, setError] = useState('');
@@ -26,7 +26,14 @@ export default function Login() {
     setError('');
 
     try {
-      const response = await loginUser(formData);
+      // Determine if identifier is email or username
+      const isEmail = formData.identifier.includes('@');
+      const loginData = {
+        [isEmail ? 'email' : 'username']: formData.identifier,
+        password: formData.password
+      };
+      
+      const response = await loginUser(loginData);
       if (response.data.success) {
         // Store complete user data with accessToken
         const userData = {
@@ -35,6 +42,8 @@ export default function Login() {
           refreshToken: response.data.data.refreshToken
         };
         localStorage.setItem('user', JSON.stringify(userData));
+        // Dispatch custom event to update navbar
+        window.dispatchEvent(new Event('userChanged'));
         navigate('/');
       }
     } catch (err) {
@@ -71,7 +80,7 @@ export default function Login() {
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="identifier" className="block text-sm font-medium text-gray-300 mb-2">
                 Email or Username
               </label>
               <div className="relative">
@@ -82,14 +91,14 @@ export default function Login() {
                   </svg>
                 </div>
                 <input
-                  id="email"
-                  name="email"
+                  id="identifier"
+                  name="identifier"
                   type="text"
                   required
-                  value={formData.email}
+                  value={formData.identifier}
                   onChange={handleChange}
                   className="appearance-none block w-full pl-10 pr-3 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
-                  placeholder="you@example.com"
+                  placeholder="Email or username"
                 />
               </div>
             </div>
@@ -148,9 +157,9 @@ export default function Login() {
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-medium text-purple-400 hover:text-purple-300 transition duration-200">
+                <Link to="/forgot-password" className="font-medium text-purple-400 hover:text-purple-300 transition duration-200">
                   Forgot password?
-                </a>
+                </Link>
               </div>
             </div>
 
@@ -169,31 +178,6 @@ export default function Login() {
               )}
             </button>
           </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/20"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-transparent text-gray-400">Or continue with</span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button className="w-full inline-flex justify-center py-2 px-4 border border-white/20 rounded-lg shadow-sm bg-white/5 text-sm font-medium text-gray-300 hover:bg-white/10 transition duration-200">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M6.29 18.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0020 3.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.073 4.073 0 01.8 7.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 010 16.407a11.616 11.616 0 006.29 1.84"/>
-                </svg>
-              </button>
-
-              <button className="w-full inline-flex justify-center py-2 px-4 border border-white/20 rounded-lg shadow-sm bg-white/5 text-sm font-medium text-gray-300 hover:bg-white/10 transition duration-200">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z" clipRule="evenodd"/>
-                </svg>
-              </button>
-            </div>
-          </div>
         </div>
 
         <p className="text-center text-sm text-gray-400">

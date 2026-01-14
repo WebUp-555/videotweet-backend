@@ -59,6 +59,7 @@ export default function VideoDetail() {
       setVideo(videoData);
       setIsLiked(videoData?.isLiked || false);
       setLikesCount(videoData?.likesCount || 0);
+      setIsSubscribed(videoData?.owner?.isSubscribed || false);
       
       // Add video to watch history
       try {
@@ -129,8 +130,19 @@ export default function VideoDetail() {
       return;
     }
     try {
-      await toggleSubscription(video.owner._id);
-      setIsSubscribed(!isSubscribed);
+      const response = await toggleSubscription(video.owner._id);
+      const newSubscribedStatus = response.data?.data?.isSubscribed;
+      if (typeof newSubscribedStatus === 'boolean') {
+        setIsSubscribed(newSubscribedStatus);
+        // Also update the video object
+        setVideo(prev => ({
+          ...prev,
+          owner: {
+            ...prev.owner,
+            isSubscribed: newSubscribedStatus
+          }
+        }));
+      }
     } catch (error) {
       console.error('Error subscribing:', error);
     }

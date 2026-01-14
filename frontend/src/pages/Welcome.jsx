@@ -115,37 +115,7 @@ export default function Welcome() {
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="bg-white/5 backdrop-blur-sm border-y border-white/10 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-2">
-                10M+
-              </div>
-              <div className="text-gray-400">Active Users</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 mb-2">
-                50M+
-              </div>
-              <div className="text-gray-400">Videos Uploaded</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-red-400 mb-2">
-                1B+
-              </div>
-              <div className="text-gray-400">Views Daily</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400 mb-2">
-                190+
-              </div>
-              <div className="text-gray-400">Countries</div>
-            </div>
-          </div>
-        </div>
-      </div>
+     
 
       {/* CTA Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">

@@ -18,6 +18,9 @@ import EditProfile from './pages/EditProfile';
 import NotFound from './pages/NotFound';
 import Welcome from './pages/Welcome';
 import WatchHistory from './pages/WatchHistory';
+import VerifyEmail from './pages/VerifyEmail';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -65,8 +68,20 @@ function Navigation() {
       }
     };
 
-    // Listen for storage changes
+    // Handle custom userChanged event for same-tab updates
+    const handleUserChanged = () => {
+      const updatedUserData = localStorage.getItem('user');
+      if (updatedUserData) {
+        setUser(JSON.parse(updatedUserData));
+      } else {
+        setUser(null);
+      }
+    };
+
+    // Listen for storage changes (other tabs)
     window.addEventListener('storage', handleStorageChange);
+    // Listen for custom event (same tab)
+    window.addEventListener('userChanged', handleUserChanged);
 
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
@@ -76,6 +91,7 @@ function Navigation() {
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('userChanged', handleUserChanged);
     };
   }, []);
 
@@ -88,6 +104,8 @@ function Navigation() {
     }
     localStorage.removeItem('user');
     setUser(null);
+    // Dispatch custom event for navbar update
+    window.dispatchEvent(new Event('userChanged'));
     window.location.href = '/login';
   };
 
@@ -323,6 +341,9 @@ function App() {
           {/* Public Routes */}
           <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
           <Route path="/signup" element={<AuthRoute><Signup /></AuthRoute>} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           
           {/* Protected Routes */}
           <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />

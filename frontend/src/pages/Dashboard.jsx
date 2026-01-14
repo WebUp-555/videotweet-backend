@@ -471,7 +471,8 @@ export default function Dashboard() {
                               <p className="text-gray-400 text-sm line-clamp-2">{video.description}</p>
                               <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
                                 <span>{video.views || 0} views</span>
-                                <span>{video.likes || 0} likes</span>
+                                <span>{video.likesCount || 0} likes</span>
+                                <span>{video.commentsCount || 0} comments</span>
                                 <span>{new Date(video.createdAt).toLocaleDateString()}</span>
                               </div>
                             </div>
@@ -582,12 +583,13 @@ export default function Dashboard() {
                     videos.map((video) => (
                       <div key={video._id} className="bg-gray-700 rounded-lg p-4 border border-gray-600">
                         <div className="flex gap-4">
-                          <img src={video.thumbnail} alt={video.title} className="w-24 h-14 rounded object-cover" />
+                          <img src={video.thumbnail || PLACEHOLDER_THUMB} alt={video.title} className="w-24 h-14 rounded object-cover" />
                           <div className="flex-1">
                             <h4 className="text-white font-semibold mb-1">{video.title}</h4>
                             <div className="flex gap-4 text-sm text-gray-400">
                               <span>{video.views || 0} views</span>
-                              <span>{video.likes || 0} likes</span>
+                              <span>{video.likesCount || 0} likes</span>
+                              <span>{video.commentsCount || 0} comments</span>
                             </div>
                           </div>
                         </div>

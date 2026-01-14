@@ -63,6 +63,14 @@ const getUserTweets = asyncHandler(async (req, res) => {
         },
         {
             $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "tweet",
+                as: "likes"
+            }
+        },
+        {
+            $lookup: {
                 from: "users",
                 localField: "owner",
                 foreignField: "_id",
@@ -82,7 +90,14 @@ const getUserTweets = asyncHandler(async (req, res) => {
         {
             $addFields: {
                 owner: { $first: "$owner" },
-                likesCount: { $size: { $ifNull: ["$likes", []] } },
+                likesCount: { $size: "$likes" },
+                isLiked: {
+                    $cond: {
+                        if: { $in: [req.user?._id, "$likes.likedBy"] },
+                        then: true,
+                        else: false
+                    }
+                },
                 commentsCount: 0
             }
         },
@@ -196,15 +211,77 @@ const deleteTweet = asyncHandler(async (req, res) => {
 })
 
 const getAllTweets = asyncHandler(async (req, res) => {
-    // This is a simplified example. A real feed would have pagination
-    // and likely only show tweets from users the current user follows.
-    const tweets = await Tweet.find({})
-        .populate("owner", "username fullName avatar")
-        .sort({ createdAt: -1 }); // Get newest tweets first
+    // Get pagination parameters
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 20
+    const skip = (page - 1) * limit
+    
+    // Aggregation pipeline to get all tweets with like info
+    const tweets = await Tweet.aggregate([
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "tweet",
+                as: "likes"
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            fullName: 1,
+                            avatar: 1,
+                            _id: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields: {
+                owner: { $first: "$owner" },
+                likesCount: { $size: "$likes" },
+                isLiked: {
+                    $cond: {
+                        if: { $in: [req.user?._id, "$likes.likedBy"] },
+                        then: true,
+                        else: false
+                    }
+                },
+                commentsCount: 0
+            }
+        },
+        {
+            $sort: { createdAt: -1 }
+        },
+        {
+            $skip: skip
+        },
+        {
+            $limit: limit
+        }
+    ])
+    
+    const totalTweets = await Tweet.countDocuments()
 
     return res.status(200).json(
-        new ApiResponse(200, tweets, "All tweets fetched successfully")
-    );
+        new ApiResponse(200, {
+            tweets,
+            pagination: {
+                page,
+                limit,
+                total: totalTweets,
+                pages: Math.ceil(totalTweets / limit)
+            }
+        }, "All tweets fetched successfully")
+    )
 })
 
 export {

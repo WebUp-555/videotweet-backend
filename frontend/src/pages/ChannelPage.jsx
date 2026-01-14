@@ -23,6 +23,7 @@ export default function ChannelPage() {
       const response = await getUserChannelProfile(username);
       const channelData = response.data.data;
       setChannel(channelData);
+      setIsSubscribed(channelData?.isSubscribed || false);
       if (channelData?._id) {
         const playlistsResponse = await getUserPlaylists(channelData._id);
         // Handle nested response structure: data.playlists
@@ -40,8 +41,18 @@ export default function ChannelPage() {
 
   const handleSubscribe = async () => {
     try {
-      await toggleSubscription(channel._id);
-      setIsSubscribed(!isSubscribed);
+      const response = await toggleSubscription(channel._id);
+      // Backend returns: { statusCode, data: { isSubscribed }, message, success }
+      // axios wraps it in response.data
+      const newSubscribedStatus = response.data?.data?.isSubscribed;
+      if (typeof newSubscribedStatus === 'boolean') {
+        setIsSubscribed(newSubscribedStatus);
+        // Also update the channel object to reflect the new subscription status
+        setChannel(prev => ({
+          ...prev,
+          isSubscribed: newSubscribedStatus
+        }));
+      }
     } catch (error) {
       console.error('Error subscribing:', error);
     }
