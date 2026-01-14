@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 // Base URL configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://videotweet-backend.onrender.com/api/v1';
+
+console.log('API Base URL:', API_BASE_URL); // Debug log
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -313,49 +315,5 @@ export const getChannelComments = () => {
 export const healthCheck = () => {
     return apiClient.get('/healthcheck');
 };
-
-// ============ AXIOS INTERCEPTORS ============
-
-// Request interceptor (for adding auth tokens if needed)
-apiClient.interceptors.request.use(
-    (config) => {
-        // You can add authorization headers here if needed
-        // const token = localStorage.getItem('accessToken');
-        // if (token) {
-        //     config.headers.Authorization = `Bearer ${token}`;
-        // }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
-
-// Response interceptor (for handling errors globally)
-apiClient.interceptors.response.use(
-    (response) => {
-        return response;
-    },
-    async (error) => {
-        const originalRequest = error.config;
-
-        // Handle 401 errors (token expired)
-        if (error.response?.status === 401 && !originalRequest._retry) {
-            originalRequest._retry = true;
-            
-            try {
-                // Try to refresh the access token
-                await refreshAccessToken();
-                return apiClient(originalRequest);
-            } catch (refreshError) {
-                // If refresh fails, redirect to login
-                // window.location.href = '/login';
-                return Promise.reject(refreshError);
-            }
-        }
-
-        return Promise.reject(error);
-    }
-);
 
 export default apiClient;
