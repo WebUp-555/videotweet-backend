@@ -6,11 +6,19 @@ const tweetSchema=new Schema ({
         required:true
     },
     owner:{
-    type:Schema.Types.ObjectId,
-    ref:"User"
+        type:Schema.Types.ObjectId,
+        ref:"User"
+    },
+    likes:[
+        {
+            type:Schema.Types.ObjectId,
+            ref:"User"
+        }
+    ],
+    isLiked:{
+        type:Boolean,
+        default:false
     }
-
-
 
 },{timestamps:true})
 

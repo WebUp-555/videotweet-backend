@@ -280,8 +280,8 @@ const updateUserAvatar = asyncHandler(async(req,res)=>
     throw new ApiError(400,"Avatar file is missing")
 
   }
-   const avatar=uploadOnCloudinary(avatarLocalPath)
-   if(!avatar.url){
+   const avatar=await uploadOnCloudinary(avatarLocalPath)
+   if(!avatar?.url){
     throw new ApiError(400,"Error while uploading on avatar")
    }
    const user=await User.findByIdAndUpdate(
@@ -310,8 +310,8 @@ const updateUserCoverimage = asyncHandler(async(req,res)=>
     throw new ApiError(400,"coverImage file is missing")
 
   }
-   const coverImage=uploadOnCloudinary(coverImageLocalPath)
-   if(!coverImage.url){
+   const coverImage=await uploadOnCloudinary(coverImageLocalPath)
+   if(!coverImage?.url){
     throw new ApiError(400,"Error while uploading on coverImage")
    }
    const user= await User.findByIdAndUpdate(
@@ -361,12 +361,41 @@ const getUSerChannelProfile = asyncHandler(async(req,res)=>{
     }
   },
   {
+    $lookup:{
+      from:"videos",
+      localField:"_id",
+      foreignField:"owner",
+      as:"videos",
+      pipeline:[
+        {
+          $project:{
+            title:1,
+            description:1,
+            thumbnail:1,
+            videoFile:1,
+            duration:1,
+            views:1,
+            likes:1,
+            createdAt:1,
+            owner:1
+          }
+        }
+      ]
+    }
+  },
+  {
     $addFields:{
       subscribersCount:{
         $size:"$subscribers"
       },
       channelsSubscribedToCount:{
         $size:"$subscribedTo"
+      },
+      videosCount:{
+        $size:"$videos"
+      },
+      viewsCount:{
+        $sum:"$videos.views"
       },
       isSubscribed: {
         $cond:{
@@ -382,13 +411,20 @@ const getUSerChannelProfile = asyncHandler(async(req,res)=>{
   {
     $project:{
       fullname:1,
+      fullName:1,
       username:1,
       subscribersCount:1,
       channelsSubscribedToCount:1,
+      videosCount:1,
+      viewsCount:1,
       isSubscribed:1,
       avatar:1,
       coverImage:1,
-      email:1
+      email:1,
+      bio:1,
+      createdAt:1,
+      updatedAt:1,
+      videos:1
 
   }
 }

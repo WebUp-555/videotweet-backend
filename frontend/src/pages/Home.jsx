@@ -3,12 +3,21 @@ import { Link } from 'react-router-dom';
 import { getAllVideos } from '../api/api';
 
 const PLACEHOLDER_THUMB = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='180'><rect width='320' height='180' fill='%23222'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23aaa' font-family='Arial' font-size='16'>Video</text></svg>";
+const PLACEHOLDER_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' rx='20' ry='20' fill='%23333'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23bbb' font-family='Arial' font-size='12'>U</text></svg>";
 
 export default function Home() {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Format duration from seconds to MM:SS
+  const formatDuration = (seconds) => {
+    if (!seconds) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     fetchVideos();
@@ -38,35 +47,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 overflow-hidden">
-        <div className="absolute inset-0 bg-black opacity-50"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center">
-            <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-6 animate-fade-in">
-              Welcome to Video Platform
-            </h1>
-            <p className="text-xl text-gray-200 mb-8 max-w-2xl mx-auto">
-              Discover, watch, and share amazing videos from creators around the world
-            </p>
-            <div className="flex justify-center gap-4">
-              <Link
-                to="/upload"
-                className="bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition duration-200 transform hover:scale-105"
-              >
-                Upload Video
-              </Link>
-              <Link
-                to="/signup"
-                className="bg-transparent border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white hover:text-purple-600 transition duration-200 transform hover:scale-105"
-              >
-                Get Started
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Search and Filter Section */}
       <div className="bg-gray-800 border-b border-gray-700 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -155,7 +135,7 @@ export default function Home() {
                   />
                   <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-40 transition duration-300"></div>
                   <div className="absolute bottom-2 right-2 bg-black bg-opacity-80 text-white text-xs px-2 py-1 rounded">
-                    {video.duration || '10:25'}
+                    {formatDuration(video.duration)}
                   </div>
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300">
                     <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-full p-3">
@@ -166,10 +146,17 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="px-1">
-                  <h3 className="text-white font-semibold mb-1 line-clamp-2 group-hover:text-purple-400 transition duration-200">
+                  <h3 className="text-white font-semibold mb-2 line-clamp-2 group-hover:text-purple-400 transition duration-200">
                     {video.title || 'Untitled Video'}
                   </h3>
-                  <p className="text-gray-400 text-sm mb-1">{video.owner?.username || 'Unknown'}</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <img
+                      src={video.owner?.avatar || PLACEHOLDER_AVATAR}
+                      alt={video.owner?.username}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                    <p className="text-gray-400 text-sm">{video.owner?.username || 'Unknown'}</p>
+                  </div>
                   <div className="flex items-center text-gray-500 text-sm gap-2">
                     <span>{video.views || 0} views</span>
                     <span>•</span>
@@ -180,22 +167,6 @@ export default function Home() {
             ))}
           </div>
         )}
-      </div>
-
-      {/* CTA Section */}
-      <div className="bg-gradient-to-r from-purple-800 to-pink-800 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">Ready to share your story?</h2>
-          <p className="text-gray-200 mb-8 max-w-2xl mx-auto">
-            Join thousands of creators and start building your audience today
-          </p>
-          <Link
-            to="/signup"
-            className="inline-block bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition duration-200 transform hover:scale-105"
-          >
-            Start Creating
-          </Link>
-        </div>
       </div>
     </div>
   );

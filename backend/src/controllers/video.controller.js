@@ -119,17 +119,17 @@ const publishAVideo = asyncHandler(async (req, res) => {
     const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
 
     if (!videoFile) {
-        throw new ApiError(500, "Video file upload failed");
+        throw new ApiError(500, "Video file upload failed - check Cloudinary credentials and file size");
     }
     if (!thumbnail) {
-        throw new ApiError(500, "Thumbnail upload failed");
+        throw new ApiError(500, "Thumbnail upload failed - check Cloudinary credentials");
     }
 
     // Always use secure_url for both video and thumbnail
     const video = await Video.create({
         title,
         description,
-        duration: videoFile.duration,
+        duration: videoFile.duration || 0,
         videoFile: videoFile.secure_url,
         thumbnail: thumbnail.secure_url,
         views: 0,

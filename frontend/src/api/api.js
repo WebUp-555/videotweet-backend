@@ -277,6 +277,11 @@ export const getChannelVideos = () => {
     return apiClient.get('/dashboard/videos');
 };
 
+// Get channel comments (secured)
+export const getChannelComments = () => {
+    return apiClient.get('/dashboard/comments');
+};
+
 // ============ HEALTHCHECK APIs ============
 
 // Health check

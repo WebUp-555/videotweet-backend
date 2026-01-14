@@ -13,6 +13,8 @@ import ChannelPage from './pages/ChannelPage';
 import TweetsPage from './pages/TweetsPage';
 import PlaylistDetail from './pages/PlaylistDetail';
 import EditVideo from './pages/EditVideo';
+import ChangePassword from './pages/ChangePassword';
+import EditProfile from './pages/EditProfile';
 import NotFound from './pages/NotFound';
 import Welcome from './pages/Welcome';
 
@@ -46,20 +48,43 @@ function Navigation() {
   const location = useLocation();
 
   useEffect(() => {
+    // Read user from localStorage on mount and whenever it changes
     const userData = localStorage.getItem('user');
     if (userData) {
       setUser(JSON.parse(userData));
     }
+
+    // Handle storage changes (e.g., from login/logout in another tab or this tab)
+    const handleStorageChange = () => {
+      const updatedUserData = localStorage.getItem('user');
+      if (updatedUserData) {
+        setUser(JSON.parse(updatedUserData));
+      } else {
+        setUser(null);
+      }
+    };
+
+    // Listen for storage changes
+    window.addEventListener('storage', handleStorageChange);
 
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // Call logout endpoint if available
+      // await logoutUser();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
     localStorage.removeItem('user');
     setUser(null);
     window.location.href = '/login';
@@ -83,7 +108,7 @@ function Navigation() {
                 <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"/>
               </svg>
             </div>
-            <span className="text-xl font-bold text-white">VideoHub</span>
+            <span className="text-xl font-bold text-white">StreamStack</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -286,6 +311,8 @@ function App() {
           <Route path="/video/:videoId" element={<ProtectedRoute><VideoDetail /></ProtectedRoute>} />
           <Route path="/upload" element={<ProtectedRoute><UploadVideo /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/edit-profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
+          <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
           <Route path="/channel/:username" element={<ProtectedRoute><ChannelPage /></ProtectedRoute>} />
           <Route path="/tweets" element={<ProtectedRoute><TweetsPage /></ProtectedRoute>} />
           <Route path="/playlist/:playlistId" element={<ProtectedRoute><PlaylistDetail /></ProtectedRoute>} />

@@ -72,7 +72,8 @@ const getUserTweets = asyncHandler(async (req, res) => {
                         $project: {
                             username: 1,
                             fullName: 1,
-                            avatar: 1
+                            avatar: 1,
+                            _id: 1
                         }
                     }
                 ]
@@ -80,7 +81,9 @@ const getUserTweets = asyncHandler(async (req, res) => {
         },
         {
             $addFields: {
-                owner: { $first: "$owner" }
+                owner: { $first: "$owner" },
+                likesCount: { $size: { $ifNull: ["$likes", []] } },
+                commentsCount: 0
             }
         },
         {

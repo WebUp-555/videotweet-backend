@@ -1,30 +1,37 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getUserChannelProfile, toggleSubscription, getUserPlaylists } from '../api/api';
 
 export default function ChannelPage() {
   const { username } = useParams();
+  const navigate = useNavigate();
   const [channel, setChannel] = useState(null);
   const [playlists, setPlaylists] = useState([]);
   const [activeTab, setActiveTab] = useState('videos');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     fetchChannelData();
+    const user = JSON.parse(localStorage.getItem('user'));
+    setCurrentUser(user);
   }, [username]);
 
   const fetchChannelData = async () => {
     try {
       const response = await getUserChannelProfile(username);
-      setChannel(response.data.data);
-      if (response.data.data?._id) {
-        const playlistsResponse = await getUserPlaylists(response.data.data._id);
-        const playlistsData = playlistsResponse.data?.data || [];
+      const channelData = response.data.data;
+      setChannel(channelData);
+      if (channelData?._id) {
+        const playlistsResponse = await getUserPlaylists(channelData._id);
+        // Handle nested response structure: data.playlists
+        const playlistsData = playlistsResponse.data?.data?.playlists || 
+                             playlistsResponse.data?.playlists || 
+                             playlistsResponse.data?.data || [];
         setPlaylists(Array.isArray(playlistsData) ? playlistsData : []);
       }
     } catch (error) {
-      console.error('Error fetching channel:', error);
       setPlaylists([]);
     } finally {
       setLoading(false);
@@ -94,6 +101,17 @@ export default function ChannelPage() {
               </div>
             </div>
             <div className="flex gap-3">
+              {currentUser?._id === channel._id && (
+                <button
+                  onClick={() => navigate('/edit-profile')}
+                  className="px-8 py-3 rounded-full font-semibold bg-purple-600 text-white hover:bg-purple-700 transition duration-200 flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                  </svg>
+                  Edit Profile
+                </button>
+              )}
               <button
                 onClick={handleSubscribe}
                 className={`px-8 py-3 rounded-full font-semibold transition duration-200 ${
@@ -204,17 +222,25 @@ export default function ChannelPage() {
                       className="group cursor-pointer"
                     >
                       <div className="relative overflow-hidden rounded-lg bg-gray-800 aspect-video mb-3">
-                        <img
-                          src={playlist.thumbnail || 'https://via.placeholder.com/320x180'}
-                          alt={playlist.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition duration-300"
-                        />
+                        {playlist.videos?.[0]?.thumbnail ? (
+                          <img
+                            src={playlist.videos[0].thumbnail}
+                            alt={playlist.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
+                            <svg className="w-12 h-12 text-white opacity-50" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"/>
+                            </svg>
+                          </div>
+                        )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
                         <div className="absolute bottom-2 right-2 bg-black bg-opacity-80 text-white text-sm px-3 py-1 rounded flex items-center gap-1">
                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"/>
                           </svg>
-                          {playlist.videosCount || 0}
+                          {playlist.videos?.length || 0}
                         </div>
                       </div>
                       <h3 className="text-white font-semibold mb-1 group-hover:text-purple-400 transition duration-200">
@@ -252,11 +278,22 @@ export default function ChannelPage() {
                     <div className="bg-gray-700/50 rounded-lg p-4">
                       <p className="text-gray-400 text-sm mb-1">Joined</p>
                       <p className="text-white font-semibold">
-                        {new Date(channel.createdAt).toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'long',
-                          day: 'numeric'
-                        })}
+                        {channel.createdAt ? (() => {
+                          try {
+                            const date = new Date(channel.createdAt);
+                            if (isNaN(date.getTime())) {
+                              return channel.createdAt;
+                            }
+                            return date.toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: 'long',
+                              day: 'numeric'
+                            });
+                          } catch (e) {
+                            console.error('Date parsing error:', e, 'createdAt:', channel.createdAt);
+                            return channel.createdAt;
+                          }
+                        })() : 'Not available'}
                       </p>
                     </div>
                     <div className="bg-gray-700/50 rounded-lg p-4">

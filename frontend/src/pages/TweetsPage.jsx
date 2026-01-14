@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { getUserTweets, createTweet, updateTweet, deleteTweet, toggleTweetLike } from '../api/api';
 
+const PLACEHOLDER_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48'><rect width='48' height='48' rx='24' ry='24' fill='%23333'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23bbb' font-family='Arial' font-size='20'>U</text></svg>";
+
 export default function TweetsPage() {
   const [tweets, setTweets] = useState([]);
   const [newTweet, setNewTweet] = useState('');
@@ -15,10 +17,9 @@ export default function TweetsPage() {
   const fetchTweets = async () => {
     try {
       const response = await getUserTweets(userId);
-      const tweetsData = response.data?.data || [];
+      const tweetsData = response.data?.data?.tweets || response.data?.tweets || [];
       setTweets(Array.isArray(tweetsData) ? tweetsData : []);
     } catch (error) {
-      console.error('Error fetching tweets:', error);
       setTweets([]);
     } finally {
       setLoading(false);
@@ -30,11 +31,11 @@ export default function TweetsPage() {
     if (!newTweet.trim()) return;
 
     try {
-      await createTweet({ content: newTweet });
+      const response = await createTweet({ content: newTweet });
       setNewTweet('');
-      fetchTweets();
+      await fetchTweets();
     } catch (error) {
-      console.error('Error creating tweet:', error);
+      alert('Failed to create tweet: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -102,7 +103,7 @@ export default function TweetsPage() {
           <form onSubmit={handleCreateTweet}>
             <div className="flex gap-4">
               <img
-                src="https://via.placeholder.com/48"
+                src={PLACEHOLDER_AVATAR}
                 alt="Your avatar"
                 className="w-12 h-12 rounded-full flex-shrink-0"
               />
@@ -138,7 +139,7 @@ export default function TweetsPage() {
             <div key={tweet._id} className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-gray-600 transition duration-200">
               <div className="flex gap-4">
                 <img
-                  src={tweet.owner?.avatar || 'https://via.placeholder.com/48'}
+                  src={tweet.owner?.avatar || PLACEHOLDER_AVATAR}
                   alt={tweet.owner?.username}
                   className="w-12 h-12 rounded-full flex-shrink-0"
                 />

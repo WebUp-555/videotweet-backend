@@ -1,6 +1,7 @@
 import mongoose from "mongoose"
 import {User} from "../models/user.model.js"
 import {Video} from "../models/video.model.js"
+import {Comment} from "../models/comment.model.js"
 import {Subscription} from "../models/subscription.model.js"
 import {Like} from "../models/like.model.js"
 import {ApiError} from "../utils/ApiError.js"
@@ -214,7 +215,102 @@ const getChannelVideos = asyncHandler(async (req, res) => {
     )
 })
 
+const getChannelComments = asyncHandler(async (req, res) => {
+    //: Get all comments on channel videos
+    const { page = 1, limit = 10 } = req.query
+    
+    // Verify authenticated user exists
+    const currentUser = await User.findById(req.user?._id)
+    if (!currentUser) {
+        throw new ApiError(404, "User not found")
+    }
+    
+    const channelId = req.user?._id
+    const skip = (page - 1) * limit
+    
+    // Get all videos owned by the channel
+    const videos = await Video.find({ owner: channelId }).select('_id')
+    const videoIds = videos.map(v => v._id)
+    
+    // Get comments on those videos with pagination
+    const comments = await Comment.aggregate([
+        {
+            $match: { 
+                video: { $in: videoIds }
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            fullName: 1,
+                            avatar: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "video",
+                foreignField: "_id",
+                as: "video",
+                pipeline: [
+                    {
+                        $project: {
+                            title: 1,
+                            thumbnail: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields: {
+                owner: { $first: "$owner" },
+                video: { $first: "$video" }
+            }
+        },
+        {
+            $sort: { createdAt: -1 }
+        },
+        {
+            $skip: skip
+        },
+        {
+            $limit: parseInt(limit)
+        }
+    ])
+    
+    // Get total count for pagination
+    const totalComments = await Comment.countDocuments({ 
+        video: { $in: videoIds }
+    })
+    
+    return res.status(200).json(
+        new ApiResponse(200, {
+            comments,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total: totalComments,
+                pages: Math.ceil(totalComments / limit),
+                hasNextPage: page < Math.ceil(totalComments / limit),
+                hasPrevPage: page > 1
+            }
+        }, "Channel comments retrieved successfully")
+    )
+})
+
 export {
     getChannelStats,
-    getChannelVideos
+    getChannelVideos,
+    getChannelComments
 }

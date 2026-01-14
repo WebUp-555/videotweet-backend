@@ -83,7 +83,11 @@ const addComment = asyncHandler(async (req, res) => {
     }
     
     // Verify authenticated user exists
-    const currentUser = await User.findById(req.user?._id)
+    if (!req.user?._id) {
+        throw new ApiError(401, "User not authenticated")
+    }
+    
+    const currentUser = await User.findById(req.user._id)
     if (!currentUser) {
         throw new ApiError(404, "User not found")
     }
@@ -98,7 +102,7 @@ const addComment = asyncHandler(async (req, res) => {
     const comment = await Comment.create({
         content: content.trim(),
         video: videoId,
-        owner: req.user?._id
+        owner: req.user._id
     })
     
     if (!comment) {

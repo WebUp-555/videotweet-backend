@@ -14,6 +14,14 @@ export default function PlaylistDetail() {
   const [createForm, setCreateForm] = useState({ name: '', description: '' });
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
+  // Format duration from seconds to MM:SS
+  const formatDuration = (seconds) => {
+    if (!seconds) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   useEffect(() => {
     fetchPlaylist();
   }, [playlistId]);
@@ -21,12 +29,20 @@ export default function PlaylistDetail() {
   const fetchPlaylist = async () => {
     try {
       const response = await getPlaylistById(playlistId);
-      setPlaylist(response.data.data);
-      if (response.data.data?.videos?.length > 0) {
-        setCurrentVideo(response.data.data.videos[0]);
+      console.log('Playlist response:', response);
+      const playlistData = response.data.data;
+      console.log('Playlist data:', playlistData);
+      console.log('Videos in playlist:', playlistData?.videos);
+      setPlaylist(playlistData);
+      if (playlistData?.videos?.length > 0) {
+        console.log('Setting current video to:', playlistData.videos[0]);
+        setCurrentVideo(playlistData.videos[0]);
+      } else {
+        console.warn('No videos in playlist');
       }
     } catch (error) {
       console.error('Error fetching playlist:', error);
+      console.error('Error details:', error.response?.data);
     } finally {
       setLoading(false);
     }
@@ -161,15 +177,24 @@ export default function PlaylistDetail() {
               {currentVideo ? (
                 <>
                   <div className="bg-black rounded-lg overflow-hidden aspect-video mb-4">
-                    <video
-                      controls
-                      className="w-full h-full"
-                      poster={currentVideo.thumbnail}
-                      src={currentVideo.videoFile}
-                      key={currentVideo._id}
-                    >
-                      Your browser does not support the video tag.
-                    </video>
+                    {currentVideo.videoFile ? (
+                      <video
+                        controls
+                        className="w-full h-full"
+                        poster={currentVideo.thumbnail}
+                        src={currentVideo.videoFile}
+                        key={currentVideo._id}
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <div className="text-center">
+                          <p>Video file not available</p>
+                          <p className="text-sm mt-2">{JSON.stringify(currentVideo)}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="bg-gray-800 rounded-lg p-6">
@@ -211,7 +236,10 @@ export default function PlaylistDetail() {
                         className={`flex gap-3 p-2 rounded-lg cursor-pointer ${
                           currentVideo?._id === video._id ? 'bg-purple-600/20 border border-purple-500/50' : 'hover:bg-gray-700'
                         }`}
-                        onClick={() => setCurrentVideo(video)}
+                        onClick={() => {
+                          console.log('Selecting video:', video);
+                          setCurrentVideo(video);
+                        }}
                       >
                         <img
                           src={video.thumbnail || 'https://via.placeholder.com/160x90'}
@@ -222,7 +250,7 @@ export default function PlaylistDetail() {
                           <h4 className="text-white font-semibold text-sm mb-1 line-clamp-2">{video.title}</h4>
                           <p className="text-gray-400 text-xs mb-2 line-clamp-2">{video.description}</p>
                           <div className="flex items-center justify-between text-xs text-gray-500">
-                            <span>{video.views || 0} views</span>
+                            <span>{formatDuration(video.duration)}</span>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleRemoveVideo(video._id); }}
                               className="text-red-400 hover:text-red-300"
@@ -241,56 +269,6 @@ export default function PlaylistDetail() {
                 </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-10 text-center text-gray-300">
-            <h2 className="text-2xl font-bold text-white mb-2">Playlist not found</h2>
-            <p className="text-gray-400 mb-4">Create a new one to get started.</p>
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold"
-            >
-              Create playlist
-            </button>
-          </div>
-        )}
-
-        {playlist ? (
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h2 className="text-2xl font-bold text-white mb-4">{playlist.name}</h2>
-            <p className="text-gray-400 mb-6">{playlist.description}</p>
-            
-            {playlist.videos && playlist.videos.length > 0 ? (
-              <div className="space-y-4">
-                {playlist.videos.map((video) => (
-                  <div key={video._id} className="flex gap-3 p-2 rounded-lg hover:bg-gray-700 cursor-pointer"
-                    onClick={() => setCurrentVideo(video)}>
-                    <img
-                      src={video.thumbnail || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYwIiBoZWlnaHQ9IjkwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxNjAiIGhlaWdodD0iOTAiIGZpbGw9IiMzMzMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSIjYWFhIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+VGh1bWJuYWlsPC90ZXh0Pjwvc3ZnPg=='}
-                      alt={video.title}
-                      className="w-40 h-24 rounded object-cover"
-                    />
-                    <div className="flex-1">
-                      <h4 className="text-white font-semibold mb-1">{video.title}</h4>
-                      <p className="text-gray-400 text-sm mb-2 line-clamp-2">{video.description}</p>
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>{video.views || 0} views</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleRemoveVideo(video._id); }}
-                          className="text-red-400 hover:text-red-300"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-400">
-                No videos in this playlist
-              </div>
-            )}
           </div>
         ) : (
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-10 text-center text-gray-300">
