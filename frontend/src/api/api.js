@@ -109,6 +109,11 @@ export const getWatchHistory = () => {
     return apiClient.get('/users/watchHistory');
 };
 
+// Add video to watch history (secured)
+export const addToWatchHistory = (videoId) => {
+    return apiClient.post(`/users/watchHistory/${videoId}`);
+};
+
 // ============ VIDEO APIs ============
 
 // Get all videos with optional filters (secured)

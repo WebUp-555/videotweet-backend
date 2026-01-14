@@ -12,7 +12,8 @@ import {
   deleteComment,
   toggleSubscription,
   getUserPlaylists,
-  addVideoToPlaylist
+  addVideoToPlaylist,
+  addToWatchHistory
 } from '../api/api';
 
 export default function VideoDetail() {
@@ -58,6 +59,14 @@ export default function VideoDetail() {
       setVideo(videoData);
       setIsLiked(videoData?.isLiked || false);
       setLikesCount(videoData?.likesCount || 0);
+      
+      // Add video to watch history
+      try {
+        await addToWatchHistory(videoId);
+      } catch (error) {
+        console.error('Error adding to watch history:', error);
+        // Don't throw error, just log it
+      }
     } catch (error) {
       console.error('Error fetching video:', error);
     } finally {

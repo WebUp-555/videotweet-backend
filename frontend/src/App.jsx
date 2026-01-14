@@ -17,6 +17,7 @@ import ChangePassword from './pages/ChangePassword';
 import EditProfile from './pages/EditProfile';
 import NotFound from './pages/NotFound';
 import Welcome from './pages/Welcome';
+import WatchHistory from './pages/WatchHistory';
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -127,6 +128,14 @@ function Navigation() {
             </Link>
             {user && (
               <Link
+                to="/watch-history"
+                className="text-gray-300 hover:text-white transition-colors duration-200 font-medium"
+              >
+                History
+              </Link>
+            )}
+            {user && (
+              <Link
                 to="/dashboard"
                 className="text-gray-300 hover:text-white transition-colors duration-200 font-medium"
               >
@@ -233,6 +242,15 @@ function Navigation() {
               >
                 Tweets
               </Link>
+              {user && (
+                <Link
+                  to="/watch-history"
+                  className="px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Watch History
+                </Link>
+              )}
               {user ? (
                 <>
                   <Link
@@ -315,6 +333,7 @@ function App() {
           <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
           <Route path="/channel/:username" element={<ProtectedRoute><ChannelPage /></ProtectedRoute>} />
           <Route path="/tweets" element={<ProtectedRoute><TweetsPage /></ProtectedRoute>} />
+          <Route path="/watch-history" element={<ProtectedRoute><WatchHistory /></ProtectedRoute>} />
           <Route path="/playlist/:playlistId" element={<ProtectedRoute><PlaylistDetail /></ProtectedRoute>} />
           <Route path="/edit-video/:videoId" element={<ProtectedRoute><EditVideo /></ProtectedRoute>} />
           

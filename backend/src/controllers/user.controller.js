@@ -493,8 +493,35 @@ const getWatchHistory=asyncHandler(async(req,res)=>{
   )
 })
 
+const addToWatchHistory = asyncHandler(async(req,res)=>{
+  const {videoId} = req.params
+  
+  if(!videoId?.trim()){
+    throw new ApiError(400,"Video ID is required")
+  }
 
+  const validVideoId = new mongoose.Types.ObjectId(videoId)
+  
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $addToSet:{
+        watchHistory: validVideoId
+      }
+    },
+    {new:true}
+  )
 
+  if(!user){
+    throw new ApiError(404,"User not found")
+  }
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200,user,"Video added to watch history successfully")
+  )
+})
 
 export { registerUser, 
   loginUser,
@@ -506,4 +533,5 @@ export { registerUser,
     updateUserAvatar,
     updateUserCoverimage,
     getUSerChannelProfile,
-     getWatchHistory };
+     getWatchHistory,
+     addToWatchHistory };
