@@ -4,6 +4,7 @@
 ![React](https://img.shields.io/badge/React-18-blue?style=for-the-badge&logo=react)
 ![Vite](https://img.shields.io/badge/Vite-5-purple?style=for-the-badge&logo=vite)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-skyblue?style=for-the-badge&logo=tailwindcss)
+![Mongoose](https://img.shields.io/badge/Mongoose-ODM-red?style=for-the-badge&logo=mongoose)
 
 A complete, full-stack web application built from the ground up, combining features from platforms like YouTube and Twitter. Users can register, upload videos, post tweets, subscribe to channels, comment, and create playlists.
 
