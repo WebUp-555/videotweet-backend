@@ -1,130 +1,57 @@
-VideoTweet Backend (Work in Progress)
+# **YOUR_PROJECT_NAME** - A Full-Stack Video Sharing Platform
 
-Backend service for a video-based microblogging application, currently focused on authentication, token management, and video upload functionality. This project is under active development.
+![Vercel Deployment](https://img.shields.io/badge/Vercel-LIVE-brightgreen?style=for-the-badge&logo=vercel)
+![React](https://img.shields.io/badge/React-18-blue?style=for-the-badge&logo=react)
+![Vite](https://img.shields.io/badge/Vite-5-purple?style=for-the-badge&logo=vite)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-skyblue?style=for-the-badge&logo=tailwindcss)
 
+A complete, full-stack web application built from the ground up, combining features from platforms like YouTube and Twitter. Users can register, upload videos, post tweets, subscribe to channels, comment, and create playlists.
 
----
-
-✅ Implemented Features
-
-User registration and login
-
-Password hashing using bcrypt
-
-JWT-based authentication (access & refresh tokens)
-
-Protected routes using auth middleware
-
-Video upload functionality
-
-Media handling with Multer
-
-Cloudinary integration for video storage (if used)
-
-
+### **Live Application:** (https://videotweet-backend.vercel.app/welcome)
 
 ---
 
-🛠 Tech Stack
+## Preview
 
-Node.js
-
-Express.js
-
-MongoDB & Mongoose
-
-JWT (Access & Refresh Tokens)
-
-bcrypt
-
-Multer
-
-Cloudinary / Local storage
-
-
+<p align="center">
+  <img alt="YOUR_PROJECT Preview" src="<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/2e514268-54f1-400e-b446-59fe39af46d4" />
+">
+</p>
 
 ---
 
-📁 Project Structure
+## Core Features
 
-videotweet-backend/
-├── src/
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   ├── middlewares/
-│   ├── utils/
-│   └── app.js
-├── .env
-├── package.json
-└── README.md
+| Dashboard & Content Management | Video Playback & Interaction | Social Feed (Tweets) |
+| :---: | :---: | :---: |
+| A complete dashboard for channel stats and full content management (Create, Update, Delete) for videos and playlists. | An interactive video player with real-time likes, subscriptions, and a full commenting system. | A fully functional micro-blogging feed where users can post tweets and view a live feed of all content. |
+| <details><summary>View Screenshot</summary><img alt="Dashboard Screenshot" src="<img width="1353" height="664" alt="image" src="https://github.com/user-attachments/assets/f1e5f680-6ed2-4336-8a65-c1dd33e60c91" />
 
+"></details> | <details><summary>View Screenshot</summary><img alt="Video Detail Screenshot" src="<img width="1343" height="694" alt="image" src="https://github.com/user-attachments/assets/fba480fa-45cd-4414-a9e2-8a95a6982638" />
+ />
+"></details> | <details><summary>View Screenshot</summary><img alt="Tweets Page Screenshot" src="<img width="1350" height="685" alt="image" src="https://github.com/user-attachments/assets/e1cce93c-4e1e-4da5-9695-6d7eeca7c8ed" />
+"></details> |
 
 ---
 
-🔐 Authentication Overview
+## Tech Stack
 
-Users authenticate using email and password
+#### **Frontend**
+- **Framework:** React.js (with Vite)
+- **Styling:** Tailwind CSS
+- **State Management:** Redux Toolkit (Global) & TanStack Query (Server)
+- **Routing:** React Router DOM
+- **HTTP Client:** Axios
 
-Passwords are securely hashed
-
-On successful login, the server issues:
-
-Access Token (short-lived)
-
-Refresh Token (long-lived)
-
-
-JWT tokens are validated via middleware for protected routes
-
-
-
----
-
-📤 Video Upload
-
-Authenticated users can upload videos
-
-Files are processed using Multer
-
-Uploaded videos are stored in cloud/local storage
-
-Video metadata is stored in MongoDB
-
-
+#### **Backend**
+- **Runtime:** Node.js
+- **Framework:** Express.js
+- **Database:** MongoDB (with Mongoose)
+- **Media Storage:** Cloudinary
+- **Authentication:** JWT (JSON Web Tokens)
 
 ---
 
-⚙️ Environment Variables
-
-PORT=8000
-MONGODB_URI=your_mongodb_uri
-ACCESS_TOKEN_SECRET=your_access_token_secret
-REFRESH_TOKEN_SECRET=your_refresh_token_secret
+## Local Setup
 
 
----
-
-▶️ Run Locally
-
-npm install
-npm run dev
-
-Server runs locally at:
-http://localhost:8000
-
-
----
-
-🚧 Status
-
-This project is in progress.
-Upcoming features include posts, likes, comments, and follow system.
-
-
----
-
-👨‍💻 Author
-
-Shamsheer 
-Backend Developer
