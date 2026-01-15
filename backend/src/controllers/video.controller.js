@@ -384,8 +384,8 @@ const getVideoById = asyncHandler(async (req, res) => {
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     const { title, description } = req.body;
-    const thumbnailLocalPath = req.files?.thumbnail?.[0]?.path || req.file?.path;
-    const videoFileLocalPath = req.files?.videoFile?.[0]?.path;
+    const thumbnailPath = req.files?.thumbnail?.[0]?.path || req.file?.path || null;
+    const videoPath = req.files?.videoFile?.[0]?.path || null;
 
     if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "Invalid videoId");
@@ -401,46 +401,34 @@ const updateVideo = asyncHandler(async (req, res) => {
     }
 
     const updateData = {};
+    const oldAssets = {};
+
     if (title) updateData.title = title;
     if (description) updateData.description = description;
 
-    if (thumbnailLocalPath) {
-        const oldThumbnailUrl = video.thumbnail;
-        const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
-        if (!thumbnail.secure_url) {
+    if (thumbnailPath) {
+        const thumbnail = await uploadOnCloudinary(thumbnailPath);
+        if (!thumbnail?.secure_url && !thumbnail?.url) {
             throw new ApiError(400, "Error while uploading thumbnail");
         }
         updateData.thumbnail = toHttpsUrl(thumbnail.secure_url || thumbnail.url);
-        
-        // Delete old thumbnail after updating the document
-        if (oldThumbnailUrl) {
-            try {
-                await deleteFromCloudinary(oldThumbnailUrl);
-            } catch (error) {
-                console.error("Failed to delete old thumbnail:", error);
-            }
-        }
+        oldAssets.thumbnail = video.thumbnail;
     }
 
-    if (videoFileLocalPath) {
-        const oldVideoFileUrl = video.videoFile;
-        const videoFile = await uploadOnCloudinary(videoFileLocalPath);
-        if (!videoFile.secure_url) {
+    if (videoPath) {
+        const uploadedVideo = await uploadOnCloudinary(videoPath);
+        if (!uploadedVideo?.secure_url && !uploadedVideo?.url) {
             throw new ApiError(400, "Error while uploading video file");
         }
-        updateData.videoFile = toHttpsUrl(videoFile.secure_url || videoFile.url);
-        if (videoFile.duration) {
-            updateData.duration = videoFile.duration;
+        updateData.videoFile = toHttpsUrl(uploadedVideo.secure_url || uploadedVideo.url);
+        if (uploadedVideo.duration) {
+            updateData.duration = uploadedVideo.duration;
         }
-        
-        // Delete old video file after updating the document
-        if (oldVideoFileUrl) {
-            try {
-                await deleteFromCloudinary(oldVideoFileUrl);
-            } catch (error) {
-                console.error("Failed to delete old video file:", error);
-            }
-        }
+        oldAssets.videoFile = video.videoFile;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+        throw new ApiError(400, "No changes provided");
     }
 
     const updatedVideo = await Video.findByIdAndUpdate(
@@ -453,7 +441,19 @@ const updateVideo = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Failed to update video details");
     }
 
-    const normalized = normalizeVideoMedia(updatedVideo)
+    // Clean up old media after a successful update
+    if (oldAssets.thumbnail) {
+        deleteFromCloudinary(oldAssets.thumbnail).catch((error) => {
+            console.error("Failed to delete old thumbnail:", error);
+        });
+    }
+    if (oldAssets.videoFile) {
+        deleteFromCloudinary(oldAssets.videoFile).catch((error) => {
+            console.error("Failed to delete old video file:", error);
+        });
+    }
+
+    const normalized = normalizeVideoMedia(updatedVideo);
 
     return res
         .status(200)
@@ -484,7 +484,6 @@ const deleteVideo = asyncHandler(async (req, res) => {
     if (video.videoFile) {
         try {
             await deleteFromCloudinary(video.videoFile)
-            console.log("Video file deleted from Cloudinary")
         } catch (error) {
             console.error("Failed to delete video file from Cloudinary:", error)
             // Don't throw error here - continue with database deletion
@@ -495,7 +494,6 @@ const deleteVideo = asyncHandler(async (req, res) => {
     if (video.thumbnail) {
         try {
             await deleteFromCloudinary(video.thumbnail)
-            console.log("Thumbnail deleted from Cloudinary")
         } catch (error) {
             console.error("Failed to delete thumbnail from Cloudinary:", error)
             // Don't throw error here - continue with database deletion

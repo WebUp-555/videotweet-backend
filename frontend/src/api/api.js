@@ -3,8 +3,6 @@ import axios from 'axios';
 // Base URL configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://videotweet-backend.onrender.com/api/v1';
 
-console.log('API Base URL:', API_BASE_URL); // Debug log
-
 // Create axios instance with default config
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
@@ -151,8 +149,12 @@ export const getVideoById = (videoId) => {
 };
 
 // Update video (secured)
-export const updateVideo = (videoId, formData) => {
-  return apiClient.patch(`/videos/${videoId}`, formData);
+export const updateVideo = (videoId, payload) => {
+    const config = payload instanceof FormData
+        ? { headers: { 'Content-Type': 'multipart/form-data' } }
+        : {};
+
+    return apiClient.patch(`/videos/${videoId}`, payload, config);
 };
 
 // Delete video (secured)
