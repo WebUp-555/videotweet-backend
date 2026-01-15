@@ -12,6 +12,8 @@ export default function EditVideo() {
   });
   const [thumbnail, setThumbnail] = useState(null);
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
+  const [videoFile, setVideoFile] = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -30,6 +32,7 @@ export default function EditVideo() {
         description: videoData.description || '',
       });
       setThumbnailPreview(videoData.thumbnail);
+      setVideoPreview(videoData.videoFile);
     } catch (error) {
       console.error('Error fetching video:', error);
       setError('Failed to load video');
@@ -57,6 +60,23 @@ export default function EditVideo() {
     }
   };
 
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('video/')) {
+        setError('Please select a valid video file');
+        return;
+      }
+      setVideoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setVideoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      setError('');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -68,6 +88,9 @@ export default function EditVideo() {
       data.append('description', formData.description);
       if (thumbnail) {
         data.append('thumbnail', thumbnail);
+      }
+      if (videoFile) {
+        data.append('videoFile', videoFile);
       }
 
       await updateVideo(videoId, data);
@@ -222,6 +245,57 @@ export default function EditVideo() {
                 maxLength={5000}
               />
               <p className="mt-1 text-sm text-gray-500">{formData.description.length}/5000</p>
+            </div>
+
+            {/* Video File */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Video File
+              </label>
+              {videoPreview && (
+                <div className="mb-4 relative group">
+                  <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                    <video
+                      controls
+                      className="w-full h-full"
+                      src={videoPreview}
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition duration-200">
+                    <label className="cursor-pointer">
+                      <span className="bg-white text-gray-900 px-4 py-2 rounded-lg font-medium inline-block hover:bg-gray-100">
+                        Change Video
+                      </span>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        onChange={handleVideoChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+              {!videoPreview && (
+                <label className="flex flex-col items-center justify-center w-full border-2 border-dashed border-gray-600 rounded-lg cursor-pointer hover:border-purple-500 transition-colors bg-gray-700/50 py-12">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <svg className="w-12 h-12 text-gray-400 mb-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"/>
+                    </svg>
+                    <p className="text-sm text-gray-400">
+                      <span className="font-semibold">Click to upload new video</span>
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    onChange={handleVideoChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
             </div>
 
             {/* Thumbnail */}

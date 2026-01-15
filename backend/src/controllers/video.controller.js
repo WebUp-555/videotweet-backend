@@ -374,7 +374,8 @@ const getVideoById = asyncHandler(async (req, res) => {
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     const { title, description } = req.body;
-    const thumbnailLocalPath = req.file?.path;
+    const thumbnailLocalPath = req.files?.thumbnail?.[0]?.path;
+    const videoFileLocalPath = req.files?.videoFile?.[0]?.path;
 
     if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "Invalid videoId");
@@ -399,7 +400,6 @@ const updateVideo = asyncHandler(async (req, res) => {
         if (!thumbnail.secure_url) {
             throw new ApiError(400, "Error while uploading thumbnail");
         }
-        // --- CRITICAL FIX ---
         updateData.thumbnail = thumbnail.secure_url;
         
         // Delete old thumbnail after updating the document
@@ -408,6 +408,27 @@ const updateVideo = asyncHandler(async (req, res) => {
                 await deleteFromCloudinary(oldThumbnailUrl);
             } catch (error) {
                 console.error("Failed to delete old thumbnail:", error);
+            }
+        }
+    }
+
+    if (videoFileLocalPath) {
+        const oldVideoFileUrl = video.videoFile;
+        const videoFile = await uploadOnCloudinary(videoFileLocalPath);
+        if (!videoFile.secure_url) {
+            throw new ApiError(400, "Error while uploading video file");
+        }
+        updateData.videoFile = videoFile.secure_url;
+        if (videoFile.duration) {
+            updateData.duration = videoFile.duration;
+        }
+        
+        // Delete old video file after updating the document
+        if (oldVideoFileUrl) {
+            try {
+                await deleteFromCloudinary(oldVideoFileUrl);
+            } catch (error) {
+                console.error("Failed to delete old video file:", error);
             }
         }
     }
