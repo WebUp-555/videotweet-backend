@@ -6,6 +6,19 @@ import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import {uploadOnCloudinary, deleteFromCloudinary} from "../utils/cloudinary.js"
 
+// Normalize media URLs to HTTPS to avoid mixed-content in browsers
+const toHttpsUrl = (url) =>
+    typeof url === "string" ? url.replace(/^http:\/\//i, "https://") : url
+
+const normalizeVideoMedia = (video) => {
+    if (!video) return video
+    return {
+        ...video,
+        videoFile: toHttpsUrl(video.videoFile),
+        thumbnail: toHttpsUrl(video.thumbnail)
+    }
+}
+
 const getAllVideos = asyncHandler(async (req, res) => {
 
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
@@ -92,10 +105,16 @@ const getAllVideos = asyncHandler(async (req, res) => {
             limit: limitNumber
         }
     )
+
+    // Normalize media URLs on the fly so old records that stored http links don't cause mixed content
+    const normalizedVideos = {
+        ...videos,
+        docs: videos?.docs?.map(normalizeVideoMedia) || []
+    }
     
     return res
         .status(200)
-        .json(new ApiResponse(200, videos, "Videos fetched successfully"))
+        .json(new ApiResponse(200, normalizedVideos, "Videos fetched successfully"))
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -130,8 +149,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
         title,
         description,
         duration: videoFile.duration || 0,
-        videoFile: videoFile.secure_url,
-        thumbnail: thumbnail.secure_url,
+        videoFile: toHttpsUrl(videoFile.secure_url || videoFile.url),
+        thumbnail: toHttpsUrl(thumbnail.secure_url || thumbnail.url),
         views: 0,
         owner: req.user?._id,
         isPublished: true // default to published for simplicity
@@ -366,9 +385,11 @@ const getVideoById = asyncHandler(async (req, res) => {
         }
     ])
     
+    const videoResponse = normalizeVideoMedia(updatedVideo[0])
+
     return res
         .status(200)
-        .json(new ApiResponse(200, updatedVideo[0], "Video details fetched successfully"))
+        .json(new ApiResponse(200, videoResponse, "Video details fetched successfully"))
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
@@ -400,7 +421,7 @@ const updateVideo = asyncHandler(async (req, res) => {
         if (!thumbnail.secure_url) {
             throw new ApiError(400, "Error while uploading thumbnail");
         }
-        updateData.thumbnail = thumbnail.secure_url;
+        updateData.thumbnail = toHttpsUrl(thumbnail.secure_url || thumbnail.url);
         
         // Delete old thumbnail after updating the document
         if (oldThumbnailUrl) {
@@ -418,7 +439,7 @@ const updateVideo = asyncHandler(async (req, res) => {
         if (!videoFile.secure_url) {
             throw new ApiError(400, "Error while uploading video file");
         }
-        updateData.videoFile = videoFile.secure_url;
+        updateData.videoFile = toHttpsUrl(videoFile.secure_url || videoFile.url);
         if (videoFile.duration) {
             updateData.duration = videoFile.duration;
         }
