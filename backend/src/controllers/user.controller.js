@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import crypto from "crypto";
 import { sendVerificationCode } from "../utils/nodemailer.js";
+import { toHttpsUrl, normalizeUserMedia, normalizeVideoMedia } from "../utils/mediaNormalizer.js";
 
 // ✅ Cookie options (works on localhost + production)
 const cookieOptions = {
@@ -71,14 +72,17 @@ const registerUser = asyncHandler(async (req, res) => {
   const avatar = await uploadOnCloudinary(avatarLocalpath);
   const coverImage = await uploadOnCloudinary(coverImageLocalpath);
 
-  if (!avatar?.url) {
+  if (!avatar?.secure_url && !avatar?.url) {
     throw new ApiError(400, "Avatar upload failed");
   }
 
+  const avatarUrl = toHttpsUrl(avatar.secure_url || avatar.url);
+  const coverImageUrl = toHttpsUrl(coverImage?.secure_url || coverImage?.url || "");
+
   const user = await User.create({
     fullname,
-    avatar: avatar.url,
-    coverImage: coverImage?.url || "",
+    avatar: avatarUrl,
+    coverImage: coverImageUrl,
     email,
     username,
     password,
@@ -91,6 +95,8 @@ const registerUser = asyncHandler(async (req, res) => {
   if (!createdUser) {
     throw new ApiError(500, "Something went wrong while registering user");
   }
+
+  const normalizedUser = normalizeUserMedia(createdUser);
 
   // ✅ Generate and send EMAIL verification code
   try {
@@ -105,7 +111,7 @@ const registerUser = asyncHandler(async (req, res) => {
   return res.status(201).json(
     new ApiResponse(
       201,
-      createdUser,
+      normalizedUser,
       "User registered successfully. Please check your email for verification code."
     )
   );
@@ -174,6 +180,8 @@ const loginUser = asyncHandler(async (req, res) => {
     "-password -refreshToken"
   );
 
+  const normalizedUser = normalizeUserMedia(loggedInUser);
+
   return res
     .status(200)
     .cookie("accessToken", accessToken, cookieOptions)
@@ -182,7 +190,7 @@ const loginUser = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         {
-          user: loggedInUser,
+          user: normalizedUser,
           accessToken,
           refreshToken,
         },
@@ -285,9 +293,11 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 
 // ✅ GET CURRENT USER
 const getCurrentUser = asyncHandler(async (req, res) => {
+  const currentUser = normalizeUserMedia(req.user);
+
   return res
     .status(200)
-    .json(new ApiResponse(200, req.user, "Current user fetched successfully"));
+    .json(new ApiResponse(200, currentUser, "Current user fetched successfully"));
 });
 
 // ✅ UPDATE ACCOUNT DETAILS
@@ -308,9 +318,11 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     { new: true }
   ).select("-password -refreshToken");
 
+  const normalizedUser = normalizeUserMedia(user);
+
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "Account details updated successfully"));
+    .json(new ApiResponse(200, normalizedUser, "Account details updated successfully"));
 });
 
 // ✅ UPDATE USER AVATAR
@@ -323,19 +335,23 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
 
-  if (!avatar?.url) {
+  if (!avatar?.secure_url && !avatar?.url) {
     throw new ApiError(400, "Error while uploading avatar");
   }
 
+  const avatarUrl = toHttpsUrl(avatar.secure_url || avatar.url);
+
   const user = await User.findByIdAndUpdate(
     req.user?._id,
-    { $set: { avatar: avatar.url } },
+    { $set: { avatar: avatarUrl } },
     { new: true }
   ).select("-password -refreshToken");
 
+  const normalizedUser = normalizeUserMedia(user);
+
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "Avatar updated successfully"));
+    .json(new ApiResponse(200, normalizedUser, "Avatar updated successfully"));
 });
 
 // ✅ UPDATE USER COVER IMAGE
@@ -348,19 +364,23 @@ const updateUserCoverimage = asyncHandler(async (req, res) => {
 
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
-  if (!coverImage?.url) {
+  if (!coverImage?.secure_url && !coverImage?.url) {
     throw new ApiError(400, "Error while uploading cover image");
   }
 
+  const coverImageUrl = toHttpsUrl(coverImage.secure_url || coverImage.url);
+
   const user = await User.findByIdAndUpdate(
     req.user?._id,
-    { $set: { coverImage: coverImage.url } },
+    { $set: { coverImage: coverImageUrl } },
     { new: true }
   ).select("-password -refreshToken");
 
+  const normalizedUser = normalizeUserMedia(user);
+
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "Cover image updated successfully"));
+    .json(new ApiResponse(200, normalizedUser, "Cover image updated successfully"));
 });
 
 // ✅ GET USER CHANNEL PROFILE (unchanged from your logic)
@@ -453,9 +473,14 @@ const getUSerChannelProfile = asyncHandler(async (req, res) => {
     throw new ApiError(404, "channel does not exists");
   }
 
+  const normalizedChannel = normalizeUserMedia({
+    ...channel[0],
+    videos: channel[0].videos?.map(normalizeVideoMedia) || []
+  });
+
   return res
     .status(200)
-    .json(new ApiResponse(200, channel[0], "User channel fetched successfully"));
+    .json(new ApiResponse(200, normalizedChannel, "User channel fetched successfully"));
 });
 
 // ✅ GET WATCH HISTORY
@@ -500,10 +525,12 @@ const getWatchHistory = asyncHandler(async (req, res) => {
     },
   ]);
 
+  const watchHistory = user[0]?.watchHistory?.map(normalizeVideoMedia) || [];
+
   return res
     .status(200)
     .json(
-      new ApiResponse(200, user[0]?.watchHistory, "Watch history fetched successfully")
+      new ApiResponse(200, watchHistory, "Watch history fetched successfully")
     );
 });
 
@@ -531,9 +558,11 @@ const addToWatchHistory = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found");
   }
 
+  const normalizedUser = normalizeUserMedia(user);
+
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "Video added to watch history successfully"));
+    .json(new ApiResponse(200, normalizedUser, "Video added to watch history successfully"));
 });
 
 // ✅ FORGOT PASSWORD (SECURE RESPONSE)
