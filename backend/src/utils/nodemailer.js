@@ -1,79 +1,124 @@
 import nodemailer from "nodemailer";
 
-const getTransport = () => {
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
-  if (SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS) {
-    return nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: Number(SMTP_PORT),
-      secure: Number(SMTP_PORT) === 465,
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-      },
-    });
-  }
-  // Fallback for development: JSON transport (no real emails sent)
-  return nodemailer.createTransport({ jsonTransport: true });
-};
+// ✅ Use ONLY these env vars (be consistent!)
+const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
 
-const transporter = getTransport();
+if (!SMTP_USER || !SMTP_PASS) {
+  console.warn("⚠️ SMTP_USER / SMTP_PASS missing. Emails will fail.");
+}
 
-export const sendEmail = async (to, subject, html) => {
+// ✅ Create transporter (Render-friendly)
+const transporter = nodemailer.createTransport({
+  host: SMTP_HOST,
+  port: SMTP_PORT,
+
+  // ✅ IMPORTANT:
+  // 587 => secure:false (STARTTLS)
+  // 465 => secure:true  (SSL)
+  secure: SMTP_PORT === 465,
+  requireTLS: SMTP_PORT === 587,
+
+  auth: {
+    user: SMTP_USER,
+    pass: SMTP_PASS, // ✅ Gmail App Password
+  },
+
+  // ✅ Render needs higher timeouts
+  connectionTimeout: 30000,
+  socketTimeout: 30000,
+  greetingTimeout: 30000,
+
+  // ✅ Helps cloud platforms with TLS handshake issues
+  tls: {
+    rejectUnauthorized: false,
+  },
+});
+
+// ✅ Verify SMTP once (logs actual reason)
+transporter
+  .verify()
+  .then(() => console.log("✅ SMTP Ready"))
+  .catch((err) => console.error("❌ SMTP Verify Failed:", err.message));
+
+// ✅ Generic email sender
+export const sendEmail = async ({ to, subject, html }) => {
+  if (!to) throw new Error("Recipient email is required");
+  if (!subject) throw new Error("Email subject is required");
+  if (!html) throw new Error("Email HTML is required");
+
+  const from = process.env.EMAIL_FROM || SMTP_USER;
+
   try {
-    const from = process.env.EMAIL_FROM || "no-reply@example.com";
     const info = await transporter.sendMail({ from, to, subject, html });
-    if (process.env.NODE_ENV !== "production") {
-      // Log email content in dev to help testing
-      try {
-        const preview = typeof info.message === 'string' ? info.message : JSON.stringify(info);
-        console.log("[Mailer] Sent mail:", preview);
-      } catch {}
-    }
+
+    console.log("✅ Email sent:", {
+      to,
+      messageId: info.messageId,
+      response: info.response,
+    });
+
     return info;
   } catch (error) {
-    console.error("[Mailer Error]", error.message);
-    throw new Error(`Failed to send email: ${error.message}`);
+    console.error("❌ Mailer Error:", {
+      message: error.message,
+      code: error.code,
+    });
+    throw error;
   }
 };
 
-export const sendVerificationCode = async (email, code, username, type = "verification") => {
-  let subject, html;
+// ✅ OTP email sender (verification + reset)
+export const sendVerificationCode = async (
+  email,
+  code,
+  username,
+  type = "verification"
+) => {
+  let subject = "";
+  let html = "";
 
   if (type === "verification") {
     subject = "Verify Your Email Address";
     html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333;">Welcome, ${username}!</h2>
-        <p style="color: #666; font-size: 16px;">Thank you for registering. Please verify your email address using the code below:</p>
-        <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-          <p style="font-size: 32px; font-weight: bold; color: #007bff; letter-spacing: 5px; margin: 0;">${code}</p>
+        <h2 style="color: #333;">Welcome, ${username} 👋</h2>
+        <p style="color: #666; font-size: 16px;">
+          Use this OTP to verify your email:
+        </p>
+        <div style="background:#f5f5f5; padding:20px; border-radius:10px; text-align:center;">
+          <h1 style="letter-spacing: 6px; margin: 0;">${code}</h1>
         </div>
-        <p style="color: #666; font-size: 14px;">This code will expire in 10 minutes.</p>
-        <p style="color: #999; font-size: 12px;">If you didn't create this account, please ignore this email.</p>
-        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-        <p style="color: #999; font-size: 12px; text-align: center;">© 2026 Our Platform. All rights reserved.</p>
+        <p style="color: #999; font-size: 14px;">Expires in 10 minutes.</p>
       </div>
     `;
   } else if (type === "reset") {
-    subject = "Reset Your Password";
+    subject = "Password Reset Code";
     html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333;">Password Reset Request</h2>
+        <h2 style="color: #333;">Reset Your Password</h2>
         <p style="color: #666; font-size: 16px;">Hi ${username},</p>
-        <p style="color: #666; font-size: 16px;">We received a request to reset your password. Use the code below to proceed:</p>
-        <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-          <p style="font-size: 32px; font-weight: bold; color: #dc3545; letter-spacing: 5px; margin: 0;">${code}</p>
+        <p style="color: #666; font-size: 16px;">
+          Use this OTP to reset your password:
+        </p>
+        <div style="background:#f5f5f5; padding:20px; border-radius:10px; text-align:center;">
+          <h1 style="letter-spacing: 6px; margin: 0;">${code}</h1>
         </div>
-        <p style="color: #666; font-size: 14px;">This code will expire in 10 minutes.</p>
-        <p style="color: #999; font-size: 12px;"><strong>Security Note:</strong> If you didn't request this, please ignore this email. Your account is secure.</p>
-        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-        <p style="color: #999; font-size: 12px; text-align: center;">© 2026 Our Platform. All rights reserved.</p>
+        <p style="color: #999; font-size: 14px;">Expires in 10 minutes.</p>
+        <p style="color: #999; font-size: 12px;">
+          If you didn’t request this, ignore this email.
+        </p>
       </div>
     `;
   } else {
-    throw new Error("Invalid email type. Use 'verification' or 'reset'");
+    throw new Error("Invalid type. Use 'verification' or 'reset'");
   }
 
-  return await sendEmail(email, subject, html);
+  return sendEmail({
+    to: email,
+    subject,
+    html,
+  });
 };
