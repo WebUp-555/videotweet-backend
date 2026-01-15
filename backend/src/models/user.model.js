@@ -122,29 +122,31 @@ userSchema.methods.generateRefreshToken = function () {
   );
 };
 
-// ✅ email verification OTP
+// ✅ Generate Email Verification Code
 userSchema.methods.generateEmailVerificationCode = function () {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-
-  this.emailVerificationCode = crypto
-    .createHash("sha256")
-    .update(code)
-    .digest("hex");
-
-  this.emailVerificationExpire = Date.now() + 10 * 60 * 1000; // 10 min
-
-  return code;
+  const code = Math.floor(1000 + Math.random() * 9000).toString();
+  
+  // Hash the code before storing
+  const hashedCode = crypto.createHash("sha256").update(code).digest("hex");
+  
+  this.emailVerificationCode = hashedCode;
+  this.emailVerificationExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  
+  return code; // Return plain code to send via email
 };
 
-// ✅ password reset OTP
+// ✅ Generate Password Reset Code
 userSchema.methods.generatePasswordResetCode = function () {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-
-  this.passwordResetCode = crypto.createHash("sha256").update(code).digest("hex");
-
-  this.passwordResetExpire = Date.now() + 10 * 60 * 1000; // 10 min
-
-  return code;
+  const code = Math.floor(1000 + Math.random() * 9000).toString();
+  
+  // Hash the code before storing
+  const hashedCode = crypto.createHash("sha256").update(code).digest("hex");
+  
+  this.passwordResetCode = hashedCode;
+  this.passwordResetExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  
+  return code; // Return plain code to send via email
 };
+
 
 export const User = mongoose.model("User", userSchema);

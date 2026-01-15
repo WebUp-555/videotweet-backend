@@ -9,6 +9,11 @@ import crypto from "crypto";
 import { sendVerificationCode } from "../utils/nodemailer.js";
 import { toHttpsUrl, normalizeUserMedia, normalizeVideoMedia } from "../utils/mediaNormalizer.js";
 
+
+
+
+const generate4DigitCode = () => Math.floor(1000 + Math.random() * 9000).toString();
+const addMinutes = (date, minutes) => new Date(date.getTime() + minutes * 60000);
 // ✅ Cookie options (works on localhost + production)
 const cookieOptions = {
   httpOnly: true,

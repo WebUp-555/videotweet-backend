@@ -4,8 +4,29 @@ import cookieParser from "cookie-parser";
 
 const app = express();
 
+// Whitelist allowed origins
+const allowedOrigins = [
+    // Development
+    "http://localhost:5173",
+    "http://localhost:3000",
+    // Production
+    "https://videotweet-backend.vercel.app",
+    "https://videotweet-backend.onrender.com",
+];
+
+// Add env CORS_ORIGIN if it exists
+if (process.env.CORS_ORIGIN) {
+    allowedOrigins.push(process.env.CORS_ORIGIN);
+}
+
 app.use(cors({
-    origin : process.env.CORS_ORIGIN,
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true
 }))
 
