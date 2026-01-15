@@ -22,6 +22,8 @@ export default function ForgotPassword() {
         setTimeout(() => {
           navigate('/reset-password', { state: { email } });
         }, 1500);
+      } else {
+        setError(response.data?.message || 'Failed to send reset code. Please try again.');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send reset code. Please try again.');

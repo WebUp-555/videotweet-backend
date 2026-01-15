@@ -18,6 +18,8 @@ import EditProfile from './pages/EditProfile';
 import NotFound from './pages/NotFound';
 import Welcome from './pages/Welcome';
 import WatchHistory from './pages/WatchHistory';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -338,6 +340,8 @@ function App() {
           {/* Public Routes */}
           <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
           <Route path="/signup" element={<AuthRoute><Signup /></AuthRoute>} />
+          <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
+          <Route path="/reset-password" element={<AuthRoute><ResetPassword /></AuthRoute>} />
           
           {/* Protected Routes */}
           <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
