@@ -7,6 +7,7 @@ import {Like} from "../models/like.model.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
+import {normalizeVideoMedia} from "../utils/mediaNormalizer.js"
 
 const getChannelStats = asyncHandler(async (req, res) => {
     //: Get the channel stats like total video views, total subscribers, total videos, total likes etc.
@@ -188,6 +189,8 @@ const getChannelVideos = asyncHandler(async (req, res) => {
             $limit: limit
         }
     ])
+
+    const normalizedVideos = videos.map(normalizeVideoMedia)
     
     // Get total count for pagination
     const totalVideos = await Video.countDocuments({
@@ -196,7 +199,7 @@ const getChannelVideos = asyncHandler(async (req, res) => {
     
     return res.status(200).json(
         new ApiResponse(200, {
-            videos,
+            videos: normalizedVideos,
             channel: {
                 _id: currentUser._id,
                 username: currentUser.username,

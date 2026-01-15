@@ -152,9 +152,7 @@ export const getVideoById = (videoId) => {
 
 // Update video (secured)
 export const updateVideo = (videoId, formData) => {
-    return apiClient.patch(`/videos/${videoId}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-    });
+  return apiClient.patch(`/videos/${videoId}`, formData);
 };
 
 // Delete video (secured)

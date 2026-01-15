@@ -5,19 +5,7 @@ import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import {uploadOnCloudinary, deleteFromCloudinary} from "../utils/cloudinary.js"
-
-// Normalize media URLs to HTTPS to avoid mixed-content in browsers
-const toHttpsUrl = (url) =>
-    typeof url === "string" ? url.replace(/^http:\/\//i, "https://") : url
-
-const normalizeVideoMedia = (video) => {
-    if (!video) return video
-    return {
-        ...video,
-        videoFile: toHttpsUrl(video.videoFile),
-        thumbnail: toHttpsUrl(video.thumbnail)
-    }
-}
+import {toHttpsUrl, normalizeVideoMedia} from "../utils/mediaNormalizer.js"
 
 const getAllVideos = asyncHandler(async (req, res) => {
 
@@ -296,6 +284,7 @@ const getVideoById = asyncHandler(async (req, res) => {
         {
             $match: {
                 _id: new mongoose.Types.ObjectId(videoId)
+                
             }
         },
         {
@@ -395,7 +384,7 @@ const getVideoById = asyncHandler(async (req, res) => {
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     const { title, description } = req.body;
-    const thumbnailLocalPath = req.files?.thumbnail?.[0]?.path;
+    const thumbnailLocalPath = req.files?.thumbnail?.[0]?.path || req.file?.path;
     const videoFileLocalPath = req.files?.videoFile?.[0]?.path;
 
     if (!isValidObjectId(videoId)) {
@@ -464,9 +453,11 @@ const updateVideo = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Failed to update video details");
     }
 
+    const normalized = normalizeVideoMedia(updatedVideo)
+
     return res
         .status(200)
-        .json(new ApiResponse(200, updatedVideo, "Video details updated successfully"));
+        .json(new ApiResponse(200, normalized, "Video details updated successfully"));
 });
 
 const deleteVideo = asyncHandler(async (req, res) => {

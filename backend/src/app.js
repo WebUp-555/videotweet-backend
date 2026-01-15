@@ -24,6 +24,7 @@ import tweetRouter from "./routes/tweet.routes.js"
 import healthcheckRouter from "./routes/healthcheck.routes.js"
 import subscriptionRouter from "./routes/subscription.routes.js"
 import likeRouter from "./routes/like.routes.js"
+import { errorHandler } from "./middlewares/error.middleware.js"
 
 
 
@@ -40,6 +41,9 @@ app.use("/api/v1/tweets",tweetRouter)
 app.use("/api/v1/healthcheck",healthcheckRouter)
 app.use("/api/v1/subscriptions",subscriptionRouter)
 app.use("/api/v1/likes",likeRouter)
+
+// Centralized error handler keeps thrown ApiError status codes intact
+app.use(errorHandler)
 
 //http:localhost:5000/api/v1/users/register
 //http:localhost:5000/api/v1/users/users
