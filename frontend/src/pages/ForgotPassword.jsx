@@ -18,10 +18,10 @@ export default function ForgotPassword() {
     try {
       const response = await forgotPassword({ email });
       if (response.data.success) {
-        setSuccess('Password reset code sent! Check your email.');
+        setSuccess('Email verified! Redirecting to reset password...');
         setTimeout(() => {
           navigate('/reset-password', { state: { email } });
-        }, 2000);
+        }, 1500);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send reset code. Please try again.');
@@ -132,7 +132,7 @@ export default function ForgotPassword() {
             <div className="ml-3">
               <h3 className="text-sm font-medium text-blue-400">Password Reset Process</h3>
               <div className="mt-2 text-sm text-blue-300">
-                <p>You'll receive a 6-digit code via email that expires in 10 minutes.</p>
+                <p>Enter your email to verify your account and reset your password.</p>
               </div>
             </div>
           </div>

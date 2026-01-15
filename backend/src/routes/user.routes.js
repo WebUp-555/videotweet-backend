@@ -14,37 +14,13 @@ import {
   getWatchHistory,
   addToWatchHistory,
   forgotPassword,
-  verifyEmailCode,
   resetPassword,
 } from "../controllers/user.controller.js";
 
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { sendEmail } from "../utils/nodemailer.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
 
 const router = Router();
-
-// ✅ TEST EMAIL ENDPOINT (ONLY for development)
-if (process.env.NODE_ENV !== "production") {
-  router.route("/test-email").post(
-    asyncHandler(async (req, res) => {
-      const { email } = req.body;
-
-      if (!email) {
-        return res.status(400).json({ success: false, message: "Email is required" });
-      }
-
-      await sendEmail({
-        to: email,
-        subject: "Test Email",
-        html: "<h1>Test Email</h1><p>If you see this, email is working ✅</p>",
-      });
-
-      res.json({ success: true, message: "Test email sent ✅" });
-    })
-  );
-}
 
 // ✅ Public routes
 router.route("/register").post(
@@ -56,7 +32,6 @@ router.route("/register").post(
 );
 
 router.route("/login").post(loginUser);
-router.route("/verify-email").post(verifyEmailCode);
 router.route("/forgot-password").post(forgotPassword);
 router.route("/reset-password").post(resetPassword);
 

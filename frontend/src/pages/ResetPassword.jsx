@@ -8,7 +8,6 @@ export default function ResetPassword() {
   
   const [formData, setFormData] = useState({
     email: email,
-    code: '',
     password: '',
     confirmPassword: '',
   });
@@ -20,17 +19,10 @@ export default function ResetPassword() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'code') {
-      setFormData({
-        ...formData,
-        [name]: value.replace(/\D/g, '').slice(0, 6),
-      });
-    } else {
-      setFormData({
-        ...formData,
-        [name]: value,
-      });
-    }
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
     setError('');
     setSuccess('');
   };
@@ -40,12 +32,6 @@ export default function ResetPassword() {
     setLoading(true);
     setError('');
     setSuccess('');
-
-    if (formData.code.length !== 6) {
-      setError('Please enter a valid 6-digit code');
-      setLoading(false);
-      return;
-    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -62,7 +48,6 @@ export default function ResetPassword() {
     try {
       const response = await resetPassword({
         email: formData.email,
-        code: formData.code,
         password: formData.password,
       });
       if (response.data.success) {
@@ -91,7 +76,7 @@ export default function ResetPassword() {
             </div>
           </div>
           <h2 className="text-4xl font-extrabold text-white mb-2">Reset Password</h2>
-          <p className="text-gray-400">Enter the code sent to your email and set a new password</p>
+          <p className="text-gray-400">Enter your new password</p>
         </div>
 
         {/* Form */}
@@ -123,26 +108,6 @@ export default function ResetPassword() {
                 className="appearance-none block w-full px-3 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
                 placeholder="you@example.com"
               />
-            </div>
-
-            <div>
-              <label htmlFor="code" className="block text-sm font-medium text-gray-300 mb-2">
-                Verification Code
-              </label>
-              <input
-                id="code"
-                name="code"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength="6"
-                required
-                value={formData.code}
-                onChange={handleChange}
-                className="appearance-none block w-full px-3 py-3 bg-white/5 border border-white/10 rounded-lg text-white text-center text-2xl tracking-widest placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
-                placeholder="000000"
-              />
-              <p className="mt-2 text-xs text-gray-400">Enter the 6-digit code from your email</p>
             </div>
 
             <div>

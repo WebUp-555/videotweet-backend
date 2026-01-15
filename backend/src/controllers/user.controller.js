@@ -6,7 +6,6 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import crypto from "crypto";
-import { sendVerificationCode } from "../utils/nodemailer.js";
 import { toHttpsUrl, normalizeUserMedia, normalizeVideoMedia } from "../utils/mediaNormalizer.js";
 
 
@@ -103,55 +102,16 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const normalizedUser = normalizeUserMedia(createdUser);
 
-  // ✅ Generate and send EMAIL verification code
-  try {
-    const verificationCode = user.generateEmailVerificationCode();
-    await user.save({ validateBeforeSave: false });
-
-    await sendVerificationCode(user.email, verificationCode, user.username, "verification");
-  } catch (emailError) {
-    console.error("Failed to send verification email:", emailError);
-  }
-
   return res.status(201).json(
     new ApiResponse(
       201,
       normalizedUser,
-      "User registered successfully. Please check your email for verification code."
+      "User registered successfully."
     )
   );
 });
 
-// ✅ VERIFY EMAIL OTP
-const verifyEmailCode = asyncHandler(async (req, res) => {
-  let { email, code } = req.body;
 
-  if (!email || !code) {
-    throw new ApiError(400, "Email and verification code are required");
-  }
-
-  email = email.toLowerCase();
-
-  const hashedCode = crypto.createHash("sha256").update(code).digest("hex");
-
-  const user = await User.findOne({
-    email,
-    emailVerificationCode: hashedCode,
-    emailVerificationExpire: { $gt: Date.now() },
-  });
-
-  if (!user) {
-    throw new ApiError(400, "Invalid or expired verification code");
-  }
-
-  user.isEmailVerified = true;
-  user.emailVerificationCode = undefined;
-  user.emailVerificationExpire = undefined;
-
-  await user.save({ validateBeforeSave: false });
-
-  return res.status(200).json(new ApiResponse(200, {}, "Email verified successfully"));
-});
 
 // ✅ LOGIN USER
 const loginUser = asyncHandler(async (req, res) => {
@@ -570,7 +530,7 @@ const addToWatchHistory = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, normalizedUser, "Video added to watch history successfully"));
 });
 
-// ✅ FORGOT PASSWORD (SECURE RESPONSE)
+// ✅ FORGOT PASSWORD - Just verify email exists in DB
 const forgotPassword = asyncHandler(async (req, res) => {
   let { email } = req.body;
 
@@ -580,36 +540,22 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   const user = await User.findOne({ email });
 
-  // ✅ no enumeration
   if (!user) {
-    return res
-      .status(200)
-      .json(new ApiResponse(200, {}, "If the email exists, reset OTP was sent"));
+    throw new ApiError(404, "User not found with this email");
   }
 
-  const resetCode = user.generatePasswordResetCode();
-  await user.save({ validateBeforeSave: false });
-
-  try {
-    await sendVerificationCode(user.email, resetCode, user.username, "reset");
-  } catch (error) {
-    user.passwordResetCode = undefined;
-    user.passwordResetExpire = undefined;
-    await user.save({ validateBeforeSave: false });
-    throw new ApiError(500, "Email could not be sent");
-  }
-
+  // ✅ Just confirm email exists, no code generation
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "If the email exists, reset OTP was sent"));
+    .json(new ApiResponse(200, {}, "Email verified. You can now reset your password."));
 });
 
-// ✅ RESET PASSWORD (KILLS SESSIONS)
+// ✅ RESET PASSWORD - Direct password reset with email verification
 const resetPassword = asyncHandler(async (req, res) => {
-  let { email, code, password } = req.body;
+  let { email, password } = req.body;
 
-  if (!email || !code || !password) {
-    throw new ApiError(400, "Email, verification code, and new password are required");
+  if (!email || !password) {
+    throw new ApiError(400, "Email and new password are required");
   }
 
   if (password.length < 8) {
@@ -618,23 +564,13 @@ const resetPassword = asyncHandler(async (req, res) => {
 
   email = email.toLowerCase();
 
-  const hashedCode = crypto.createHash("sha256").update(code).digest("hex");
-
-  const user = await User.findOne({
-    email,
-    passwordResetCode: hashedCode,
-    passwordResetExpire: { $gt: Date.now() },
-  });
+  const user = await User.findOne({ email });
 
   if (!user) {
-    throw new ApiError(400, "Invalid or expired verification code");
+    throw new ApiError(404, "User not found");
   }
 
   user.password = password;
-
-  // ✅ clear reset data
-  user.passwordResetCode = undefined;
-  user.passwordResetExpire = undefined;
 
   // ✅ kill sessions
   user.refreshToken = undefined;
@@ -659,6 +595,5 @@ export {
   getWatchHistory,
   addToWatchHistory,
   forgotPassword,
-  verifyEmailCode,
   resetPassword,
 };

@@ -75,7 +75,9 @@ export default function Signup() {
 
       const response = await registerUser(data);
       if (response.data.success) {
-        navigate('/verify-email', { state: { email: formData.email } });
+        // Show success message and redirect to login
+        alert('Account created successfully! Please login.');
+        navigate('/login');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
