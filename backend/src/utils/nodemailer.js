@@ -1,25 +1,39 @@
 import nodemailer from "nodemailer";
 
-// SMTP config is env-driven so it works on Render and locally
+// --- SMTP ENV CONFIG (Render + Local) ---
 const host = process.env.SMTP_HOST || "smtp.gmail.com";
 const port = Number(process.env.SMTP_PORT || 587);
 const secure = port === 465; // 465 = SSL, 587 = STARTTLS
 
+// ✅ transporter
 const transporter = nodemailer.createTransport({
   host,
   port,
   secure,
-  pool: true,
-  maxConnections: 3,
-  connectionTimeout: 10000,
-  socketTimeout: 10000,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
+    pass: process.env.EMAIL_PASSWORD, // ✅ MUST be Google App Password
+  },
+
+  // Render is slow sometimes → don't use stupid 5s timeouts
+  connectionTimeout: 20000,
+  socketTimeout: 20000,
+
+  // Helps avoid random TLS handshake issues on hosted platforms
+  tls: {
+    rejectUnauthorized: false,
   },
 });
 
-// Send welcome email
+// ✅ Verify once (shows errors clearly in Render logs)
+transporter
+  .verify()
+  .then(() => console.log("✅ SMTP Ready"))
+  .catch((err) => console.error("❌ SMTP Verify Failed:", err));
+
+// --------------------
+// ✅ Send Welcome Email
+// --------------------
 export const sendWelcomeEmail = async (email, username) => {
   const mailOptions = {
     from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
@@ -47,41 +61,54 @@ export const sendWelcomeEmail = async (email, username) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log("Welcome email sent successfully");
+    console.log("✅ Welcome email sent to:", email);
   } catch (error) {
-    console.error("Error sending welcome email:", error);
-    throw error;
+    console.error("❌ Error sending welcome email:", error);
+    throw new Error("Welcome email could not be sent");
   }
 };
 
-// Send verification code email
-export const sendVerificationCode = async (email, code, username, purpose = "verification") => {
-  const subject = purpose === "reset" ? "Password Reset Code" : "Email Verification Code";
-  const title = purpose === "reset" ? "Password Reset Request" : "Verify Your Email";
-  const message = purpose === "reset" 
-    ? "We received a request to reset your password. Use the code below to reset it:"
-    : "Thank you for signing up! Please use the code below to verify your email address:";
+// ---------------------------------
+// ✅ Send Verification / Reset Code
+// ---------------------------------
+export const sendVerificationCode = async (
+  email,
+  code,
+  username,
+  purpose = "verification"
+) => {
+  const subject =
+    purpose === "reset" ? "Password Reset Code" : "Email Verification Code";
+
+  const title =
+    purpose === "reset" ? "Password Reset Request" : "Verify Your Email";
+
+  const message =
+    purpose === "reset"
+      ? "We received a request to reset your password. Use the code below to reset it:"
+      : "Thank you for signing up! Please use the code below to verify your email address:";
 
   const mailOptions = {
     from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
     to: email,
-    subject: subject,
+    subject,
     html: `
       <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4;">
         <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 10px;">
           <h1 style="color: #333;">${title}</h1>
-          <p style="color: #666; font-size: 16px;">
-            Hi ${username},
-          </p>
-          <p style="color: #666; font-size: 16px;">
-            ${message}
-          </p>
+          <p style="color: #666; font-size: 16px;">Hi ${username},</p>
+          <p style="color: #666; font-size: 16px;">${message}</p>
+
           <div style="text-align: center; margin: 30px 0; background-color: #f8f9fa; padding: 20px; border-radius: 5px;">
-            <h2 style="color: #007bff; font-size: 32px; letter-spacing: 5px; margin: 0;">${code}</h2>
+            <h2 style="color: #007bff; font-size: 32px; letter-spacing: 5px; margin: 0;">
+              ${code}
+            </h2>
           </div>
+
           <p style="color: #999; font-size: 14px; margin-top: 30px;">
             This code will expire in 10 minutes.
           </p>
+
           <p style="color: #999; font-size: 14px;">
             If you didn't request this, please ignore this email.
           </p>
@@ -92,9 +119,9 @@ export const sendVerificationCode = async (email, code, username, purpose = "ver
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`${purpose} code email sent successfully`);
+    console.log(`✅ ${purpose} code email sent to:`, email);
   } catch (error) {
-    console.error(`Error sending ${purpose} code email:`, error);
-    throw error;
+    console.error(`❌ Error sending ${purpose} code email:`, error);
+    throw new Error(`${purpose} email could not be sent`);
   }
 };
