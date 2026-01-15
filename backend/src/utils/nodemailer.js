@@ -20,16 +20,21 @@ const getTransport = () => {
 const transporter = getTransport();
 
 export const sendEmail = async (to, subject, html) => {
-  const from = process.env.EMAIL_FROM || "no-reply@example.com";
-  const info = await transporter.sendMail({ from, to, subject, html });
-  if (process.env.NODE_ENV !== "production") {
-    // Log email content in dev to help testing
-    try {
-      const preview = typeof info.message === 'string' ? info.message : JSON.stringify(info);
-      console.log("[Mailer] Sent mail:", preview);
-    } catch {}
+  try {
+    const from = process.env.EMAIL_FROM || "no-reply@example.com";
+    const info = await transporter.sendMail({ from, to, subject, html });
+    if (process.env.NODE_ENV !== "production") {
+      // Log email content in dev to help testing
+      try {
+        const preview = typeof info.message === 'string' ? info.message : JSON.stringify(info);
+        console.log("[Mailer] Sent mail:", preview);
+      } catch {}
+    }
+    return info;
+  } catch (error) {
+    console.error("[Mailer Error]", error.message);
+    throw new Error(`Failed to send email: ${error.message}`);
   }
-  return info;
 };
 
 export const sendVerificationCode = async (email, code, username, type = "verification") => {
