@@ -18,6 +18,14 @@ export default function EditVideo() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // Format duration from seconds to MM:SS
+  const formatDuration = (seconds) => {
+    if (!seconds) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   useEffect(() => {
     fetchVideo();
   }, [videoId]);
@@ -186,6 +194,8 @@ export default function EditVideo() {
           <div className="mt-4 flex items-center justify-between">
             <div className="flex items-center gap-4 text-sm text-gray-400">
               <span>{video.views || 0} views</span>
+              <span>•</span>
+              <span>{formatDuration(video.duration)} runtime</span>
               <span>•</span>
               <span>{video.likes || 0} likes</span>
               <span>•</span>

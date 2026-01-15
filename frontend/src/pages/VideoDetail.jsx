@@ -248,6 +248,8 @@ export default function VideoDetail() {
                     {video.views || 0} views
                   </span>
                   <span>•</span>
+                  <span>{formatDuration(video.duration)} runtime</span>
+                  <span>•</span>
                   <span>{new Date(video.createdAt).toLocaleDateString()}</span>
                 </div>
 
