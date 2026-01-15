@@ -1,4 +1,5 @@
 import mongoose, {isValidObjectId} from "mongoose"
+import fs from "fs"
 import {Video} from "../models/video.model.js"
 import {User} from "../models/user.model.js"
 import {ApiError} from "../utils/ApiError.js"
@@ -6,6 +7,17 @@ import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import {uploadOnCloudinary, deleteFromCloudinary} from "../utils/cloudinary.js"
 import {toHttpsUrl, normalizeVideoMedia} from "../utils/mediaNormalizer.js"
+
+// Helper function to delete file from disk
+const deleteLocalFile = (filePath) => {
+    try {
+        if (filePath && fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+    } catch (error) {
+        console.error("Failed to delete local file:", error);
+    }
+};
 
 const getAllVideos = asyncHandler(async (req, res) => {
 
@@ -122,35 +134,41 @@ const publishAVideo = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Thumbnail is required");
     }
 
-    const videoFile = await uploadOnCloudinary(videoFileLocalPath);
-    const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+    try {
+        const videoFile = await uploadOnCloudinary(videoFileLocalPath);
+        const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
 
-    if (!videoFile) {
-        throw new ApiError(500, "Video file upload failed - check Cloudinary credentials and file size");
+        if (!videoFile) {
+            throw new ApiError(500, "Video file upload failed - check Cloudinary credentials and file size");
+        }
+        if (!thumbnail) {
+            throw new ApiError(500, "Thumbnail upload failed - check Cloudinary credentials");
+        }
+
+        // Always use secure_url for both video and thumbnail
+        const video = await Video.create({
+            title,
+            description,
+            duration: videoFile.duration || 0,
+            videoFile: toHttpsUrl(videoFile.secure_url || videoFile.url),
+            thumbnail: toHttpsUrl(thumbnail.secure_url || thumbnail.url),
+            views: 0,
+            owner: req.user?._id,
+            isPublished: true // default to published for simplicity
+        });
+
+        if (!video) {
+            throw new ApiError(500, "Video upload failed please try again");
+        }
+
+        return res
+            .status(201)
+            .json(new ApiResponse(201, video, "Video uploaded successfully"));
+    } finally {
+        // Clean up temporary files after upload
+        deleteLocalFile(videoFileLocalPath);
+        deleteLocalFile(thumbnailLocalPath);
     }
-    if (!thumbnail) {
-        throw new ApiError(500, "Thumbnail upload failed - check Cloudinary credentials");
-    }
-
-    // Always use secure_url for both video and thumbnail
-    const video = await Video.create({
-        title,
-        description,
-        duration: videoFile.duration || 0,
-        videoFile: toHttpsUrl(videoFile.secure_url || videoFile.url),
-        thumbnail: toHttpsUrl(thumbnail.secure_url || thumbnail.url),
-        views: 0,
-        owner: req.user?._id,
-        isPublished: true // default to published for simplicity
-    });
-
-    if (!video) {
-        throw new ApiError(500, "Video upload failed please try again");
-    }
-
-    return res
-        .status(201)
-        .json(new ApiResponse(201, video, "Video uploaded successfully"));
 });
 
 const getVideoById = asyncHandler(async (req, res) => {
@@ -400,64 +418,70 @@ const updateVideo = asyncHandler(async (req, res) => {
         throw new ApiError(403, "You can't edit this video as you are not the owner");
     }
 
-    const updateData = {};
-    const oldAssets = {};
+    try {
+        const updateData = {};
+        const oldAssets = {};
 
-    if (title) updateData.title = title;
-    if (description) updateData.description = description;
+        if (title) updateData.title = title;
+        if (description) updateData.description = description;
 
-    if (thumbnailPath) {
-        const thumbnail = await uploadOnCloudinary(thumbnailPath);
-        if (!thumbnail?.secure_url && !thumbnail?.url) {
-            throw new ApiError(400, "Error while uploading thumbnail");
+        if (thumbnailPath) {
+            const thumbnail = await uploadOnCloudinary(thumbnailPath);
+            if (!thumbnail?.secure_url && !thumbnail?.url) {
+                throw new ApiError(400, "Error while uploading thumbnail");
+            }
+            updateData.thumbnail = toHttpsUrl(thumbnail.secure_url || thumbnail.url);
+            oldAssets.thumbnail = video.thumbnail;
         }
-        updateData.thumbnail = toHttpsUrl(thumbnail.secure_url || thumbnail.url);
-        oldAssets.thumbnail = video.thumbnail;
-    }
 
-    if (videoPath) {
-        const uploadedVideo = await uploadOnCloudinary(videoPath);
-        if (!uploadedVideo?.secure_url && !uploadedVideo?.url) {
-            throw new ApiError(400, "Error while uploading video file");
+        if (videoPath) {
+            const uploadedVideo = await uploadOnCloudinary(videoPath);
+            if (!uploadedVideo?.secure_url && !uploadedVideo?.url) {
+                throw new ApiError(400, "Error while uploading video file");
+            }
+            updateData.videoFile = toHttpsUrl(uploadedVideo.secure_url || uploadedVideo.url);
+            if (uploadedVideo.duration) {
+                updateData.duration = uploadedVideo.duration;
+            }
+            oldAssets.videoFile = video.videoFile;
         }
-        updateData.videoFile = toHttpsUrl(uploadedVideo.secure_url || uploadedVideo.url);
-        if (uploadedVideo.duration) {
-            updateData.duration = uploadedVideo.duration;
+
+        if (Object.keys(updateData).length === 0) {
+            throw new ApiError(400, "No changes provided");
         }
-        oldAssets.videoFile = video.videoFile;
+
+        const updatedVideo = await Video.findByIdAndUpdate(
+            videoId,
+            { $set: updateData },
+            { new: true }
+        );
+
+        if (!updatedVideo) {
+            throw new ApiError(500, "Failed to update video details");
+        }
+
+        // Clean up old media after a successful update
+        if (oldAssets.thumbnail) {
+            deleteFromCloudinary(oldAssets.thumbnail).catch((error) => {
+                console.error("Failed to delete old thumbnail:", error);
+            });
+        }
+        if (oldAssets.videoFile) {
+            deleteFromCloudinary(oldAssets.videoFile).catch((error) => {
+                console.error("Failed to delete old video file:", error);
+            });
+        }
+
+        const normalized = normalizeVideoMedia(updatedVideo);
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, normalized, "Video details updated successfully"));
+    } finally {
+        // Clean up temporary files after upload
+        deleteLocalFile(thumbnailPath);
+        deleteLocalFile(videoPath);
     }
-
-    if (Object.keys(updateData).length === 0) {
-        throw new ApiError(400, "No changes provided");
-    }
-
-    const updatedVideo = await Video.findByIdAndUpdate(
-        videoId,
-        { $set: updateData },
-        { new: true }
-    );
-
-    if (!updatedVideo) {
-        throw new ApiError(500, "Failed to update video details");
-    }
-
-    // Clean up old media after a successful update
-    if (oldAssets.thumbnail) {
-        deleteFromCloudinary(oldAssets.thumbnail).catch((error) => {
-            console.error("Failed to delete old thumbnail:", error);
-        });
-    }
-    if (oldAssets.videoFile) {
-        deleteFromCloudinary(oldAssets.videoFile).catch((error) => {
-            console.error("Failed to delete old video file:", error);
-        });
-    }
-
-    const normalized = normalizeVideoMedia(updatedVideo);
-
-    return res
-        .status(200)
-        .json(new ApiResponse(200, normalized, "Video details updated successfully"));
 });
 
 const deleteVideo = asyncHandler(async (req, res) => {
