@@ -1,18 +1,28 @@
 import nodemailer from "nodemailer";
 
-// Create a transporter
+// SMTP config is env-driven so it works on Render and locally
+const host = process.env.SMTP_HOST || "smtp.gmail.com";
+const port = Number(process.env.SMTP_PORT || 587);
+const secure = port === 465; // 465 = SSL, 587 = STARTTLS
+
 const transporter = nodemailer.createTransport({
-  service: "gmail", // You can use other services like 'yahoo', 'outlook', etc.
+  host,
+  port,
+  secure,
+  pool: true,
+  maxConnections: 3,
+  connectionTimeout: 10000,
+  socketTimeout: 10000,
   auth: {
-    user: process.env.EMAIL_USER, // Your email address
-    pass: process.env.EMAIL_PASSWORD, // Your email password or app password
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
   },
 });
 
 // Send welcome email
 export const sendWelcomeEmail = async (email, username) => {
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
     to: email,
     subject: "Welcome to Our Platform!",
     html: `
@@ -53,7 +63,7 @@ export const sendVerificationCode = async (email, code, username, purpose = "ver
     : "Thank you for signing up! Please use the code below to verify your email address:";
 
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
     to: email,
     subject: subject,
     html: `
