@@ -12,6 +12,14 @@ export default function ChannelPage() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
 
+  // Helper function to convert duration to minutes
+  const formatDuration = (duration) => {
+    if (!duration) return '0:00';
+    const minutes = Math.floor(duration / 60);
+    const seconds = Math.floor(duration % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
   useEffect(() => {
     fetchChannelData();
     const user = JSON.parse(localStorage.getItem('user'));
@@ -196,7 +204,7 @@ export default function ChannelPage() {
                         />
                         <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-40 transition duration-300"></div>
                         <div className="absolute bottom-2 right-2 bg-black bg-opacity-80 text-white text-xs px-2 py-1 rounded">
-                          {video.duration || '10:25'}
+                          {formatDuration(video.duration)}
                         </div>
                       </div>
                       <h3 className="text-white font-semibold mb-1 line-clamp-2 group-hover:text-purple-400 transition duration-200">
