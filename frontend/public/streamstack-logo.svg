@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Stack layers -->
+  <rect x="20" y="55" width="60" height="8" rx="2" fill="url(#gradient)" opacity="0.6"/>
+  <rect x="20" y="42" width="60" height="8" rx="2" fill="url(#gradient)" opacity="0.8"/>
+  <rect x="20" y="29" width="60" height="8" rx="2" fill="url(#gradient)"/>
+  
+  <!-- Stream flow lines -->
+  <path d="M 15 20 Q 25 15, 35 18" stroke="#667eea" stroke-width="2" fill="none" stroke-linecap="round">
+    <animate attributeName="stroke-dasharray" from="0,20" to="20,0" dur="1.5s" repeatCount="indefinite"/>
+  </path>
+  <path d="M 40 16 Q 50 13, 60 16" stroke="#764ba2" stroke-width="2" fill="none" stroke-linecap="round">
+    <animate attributeName="stroke-dasharray" from="0,20" to="20,0" dur="1.5s" begin="0.3s" repeatCount="indefinite"/>
+  </path>
+  <path d="M 65 18 Q 75 15, 85 20" stroke="#667eea" stroke-width="2" fill="none" stroke-linecap="round">
+    <animate attributeName="stroke-dasharray" from="0,20" to="20,0" dur="1.5s" begin="0.6s" repeatCount="indefinite"/>
+  </path>
+  
+  <!-- Connecting dots -->
+  <circle cx="15" cy="20" r="2" fill="#667eea"/>
+  <circle cx="50" cy="14" r="2.5" fill="#764ba2"/>
+  <circle cx="85" cy="20" r="2" fill="#667eea"/>
+</svg>
