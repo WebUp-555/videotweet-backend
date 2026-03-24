@@ -7,8 +7,20 @@ export default function TweetsPage() {
   const [tweets, setTweets] = useState([]);
   const [newTweet, setNewTweet] = useState('');
   const [editingTweet, setEditingTweet] = useState(null);
+  const [editContent, setEditContent] = useState('');
   const [loading, setLoading] = useState(true);
   const currentUser = JSON.parse(localStorage.getItem('user')) || null;
+
+  const trendingItems = [
+    { id: 1, label: 'Technology  Trending', tag: '#WebDevelopment', posts: '124K posts' },
+    { id: 2, label: 'Gaming  Trending', tag: 'E3 Announcements', posts: '85.2K posts' },
+    { id: 3, label: 'Entertainment  Trending', tag: '#CreatorAwards', posts: '42.1K posts' },
+  ];
+
+  const suggestedCreators = [
+    { id: 1, name: 'Chill Music', username: '@chillbeats', avatar: PLACEHOLDER_AVATAR, verified: true },
+    { id: 2, name: 'Cooking with Sarah', username: '@sarahcooks', avatar: PLACEHOLDER_AVATAR, verified: false },
+  ];
 
   useEffect(() => {
     fetchTweets();
@@ -31,7 +43,7 @@ export default function TweetsPage() {
     if (!newTweet.trim()) return;
 
     try {
-      const response = await createTweet({ content: newTweet });
+      await createTweet({ content: newTweet });
       setNewTweet('');
       await fetchTweets();
     } catch (error) {
@@ -39,10 +51,12 @@ export default function TweetsPage() {
     }
   };
 
-  const handleUpdateTweet = async (tweetId, content) => {
+  const handleUpdateTweet = async (tweetId) => {
+    if (!editContent.trim()) return;
     try {
-      await updateTweet(tweetId, { content });
+      await updateTweet(tweetId, { content: editContent });
       setEditingTweet(null);
+      setEditContent('');
       fetchTweets();
     } catch (error) {
       console.error('Error updating tweet:', error);
@@ -64,17 +78,16 @@ export default function TweetsPage() {
     try {
       const response = await toggleTweetLike(tweetId);
       const isLiked = response.data?.data?.isLiked;
-      
-      // Update the tweet in the local state
-      setTweets(prevTweets => 
-        prevTweets.map(tweet => 
-          tweet._id === tweetId 
+
+      setTweets((prevTweets) =>
+        prevTweets.map((tweet) =>
+          tweet._id === tweetId
             ? {
                 ...tweet,
-                isLiked: isLiked,
-                likesCount: isLiked 
-                  ? (tweet.likesCount || 0) + 1 
-                  : Math.max((tweet.likesCount || 0) - 1, 0)
+                isLiked,
+                likesCount: isLiked
+                  ? (tweet.likesCount || 0) + 1
+                  : Math.max((tweet.likesCount || 0) - 1, 0),
               }
             : tweet
         )
@@ -86,183 +99,232 @@ export default function TweetsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-14 w-14 border-t-2 border-b-2 border-emerald-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"/>
-                  <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"/>
-                </svg>
-              </div>
-            </div>
-            <h1 className="text-4xl font-bold text-white mb-2">Tweets</h1>
-            <p className="text-blue-100">Share your thoughts with the community</p>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen overflow-x-hidden bg-black px-3 py-4 sm:px-4 sm:py-5 lg:px-6 lg:py-6">
+      <div className="mx-auto flex w-full max-w-7xl items-start justify-center gap-4 lg:gap-8">
+        <aside className="sticky top-20 hidden w-60 flex-none flex-col gap-2 lg:flex">
+          <button className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-left hover:bg-gray-800 transition-colors">
+            <span className="font-semibold text-gray-100">Home</span>
+          </button>
+          <button className="flex w-full items-center gap-3 rounded-md bg-gray-800 px-4 py-3 text-left">
+            <span className="font-semibold text-emerald-400">Community</span>
+          </button>
+          <button className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-left hover:bg-gray-800 transition-colors">
+            <span className="font-semibold text-gray-100">Explore</span>
+          </button>
+          <button className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-left hover:bg-gray-800 transition-colors">
+            <span className="font-semibold text-gray-100">Notifications</span>
+          </button>
+          <button className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-left hover:bg-gray-800 transition-colors">
+            <span className="font-semibold text-gray-100">Profile</span>
+          </button>
+          <button className="mt-4 w-full rounded-lg bg-emerald-600 px-4 py-2.5 font-semibold text-white hover:bg-emerald-700 transition">
+            Post Update
+          </button>
+        </aside>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Create Tweet */}
-        <div className="bg-gray-800 rounded-lg p-6 mb-6 border border-gray-700">
-          <form onSubmit={handleCreateTweet}>
-            <div className="flex gap-4">
-              <img
-                src={PLACEHOLDER_AVATAR}
-                alt="Your avatar"
-                className="w-12 h-12 rounded-full flex-shrink-0"
-              />
-              <div className="flex-1">
-                <textarea
-                  value={newTweet}
-                  onChange={(e) => setNewTweet(e.target.value)}
-                  placeholder="What's happening?"
-                  className="w-full bg-gray-700 text-white px-4 py-3 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 border border-gray-600 placeholder-gray-400"
-                  rows="3"
-                  maxLength={280}
-                />
-                <div className="flex items-center justify-between mt-3">
-                  <span className="text-sm text-gray-400">
-                    {newTweet.length}/280
-                  </span>
+        <main className="min-w-0 w-full max-w-[640px] overflow-hidden rounded-xl border border-gray-800 bg-gray-900 shadow-sm">
+          <div className="sticky top-16 z-10 flex w-full items-center border-b border-gray-800 bg-gray-900/95 px-3 py-3 backdrop-blur-md sm:px-4">
+            <span className="text-lg font-semibold text-white sm:text-xl">Community Posts</span>
+          </div>
+
+          <div className="w-full border-b border-gray-800 px-3 py-4 sm:px-4">
+            <form onSubmit={handleCreateTweet}>
+              <div className="flex w-full items-start gap-3">
+                <img className="mt-1 h-9 w-9 rounded-full object-cover sm:h-10 sm:w-10" src={PLACEHOLDER_AVATAR} alt="Your avatar" />
+                <div className="min-w-0 flex-1">
+                  <textarea
+                    value={newTweet}
+                    onChange={(e) => setNewTweet(e.target.value)}
+                    className="min-h-[90px] w-full resize-none rounded-md border border-gray-800 px-3 py-2 text-gray-100 outline-none placeholder:text-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-900/40"
+                    placeholder="What's happening in the community?"
+                    maxLength={280}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-3 flex w-full flex-wrap items-center justify-between gap-y-2 border-t border-gray-800 pt-3">
+                <div className="flex items-center gap-1 text-gray-400">
+                  <button type="button" className="rounded-full p-2 hover:bg-gray-800">IMG</button>
+                  <button type="button" className="rounded-full p-2 hover:bg-gray-800">VID</button>
+                  <button type="button" className="rounded-full p-2 hover:bg-gray-800">EMO</button>
+                  <button type="button" className="rounded-full p-2 hover:bg-gray-800">LOC</button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-400">{newTweet.length}/280</span>
                   <button
                     type="submit"
                     disabled={!newTweet.trim()}
-                    className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
+                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Tweet
+                    Post
                   </button>
                 </div>
               </div>
-            </div>
-          </form>
-        </div>
+            </form>
+          </div>
 
-        {/* Tweets List */}
-        <div className="space-y-4">
-          {Array.isArray(tweets) && tweets.length > 0 ? tweets.map((tweet) => (
-            <div key={tweet._id} className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-gray-600 transition duration-200">
-              <div className="flex gap-4">
-                <img
-                  src={tweet.owner?.avatar || PLACEHOLDER_AVATAR}
-                  alt={tweet.owner?.username}
-                  className="w-12 h-12 rounded-full flex-shrink-0"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-white font-semibold">{tweet.owner?.fullName || 'Anonymous'}</span>
-                    <span className="text-gray-400">@{tweet.owner?.username || 'unknown'}</span>
-                    <span className="text-gray-500">•</span>
-                    <span className="text-gray-500 text-sm">
-                      {new Date(tweet.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
+          {Array.isArray(tweets) && tweets.length > 0 ? (
+            tweets.map((tweet) => (
+              <article key={tweet._id} className="w-full border-b border-gray-800 px-3 py-4 transition-colors hover:bg-gray-950 sm:px-4">
+                <div className="flex w-full items-start gap-3">
+                  <img
+                    className="h-9 w-9 rounded-full object-cover sm:h-10 sm:w-10"
+                    src={tweet.owner?.avatar || PLACEHOLDER_AVATAR}
+                    alt={tweet.owner?.username || 'User avatar'}
+                  />
 
-                  {editingTweet === tweet._id ? (
-                    <div>
-                      <textarea
-                        defaultValue={tweet.content}
-                        className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2"
-                        rows="3"
-                        id={`edit-${tweet._id}`}
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            const content = document.getElementById(`edit-${tweet._id}`).value;
-                            handleUpdateTweet(tweet._id, content);
-                          }}
-                          className="px-4 py-1.5 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition duration-200"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => setEditingTweet(null)}
-                          className="px-4 py-1.5 bg-gray-700 text-white rounded-lg text-sm hover:bg-gray-600 transition duration-200"
-                        >
-                          Cancel
-                        </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex w-full items-start justify-between gap-2">
+                      <div className="min-w-0 flex flex-wrap items-center gap-1">
+                        <span className="max-w-full truncate font-semibold text-white hover:underline">{tweet.owner?.fullName || 'Anonymous'}</span>
+                        <span className="text-sm text-gray-400">@{tweet.owner?.username || 'unknown'}</span>
+                        <span className="text-sm text-gray-400">•</span>
+                        <span className="text-sm text-gray-400">{new Date(tweet.createdAt).toLocaleDateString()}</span>
                       </div>
+                      <button className="shrink-0 rounded-full p-1.5 text-gray-400 hover:bg-gray-800">...</button>
                     </div>
-                  ) : (
-                    <>
-                      <p className="text-gray-200 mb-4">{tweet.content}</p>
 
-                      <div className="flex items-center gap-6">
-                        <button
-                          onClick={() => handleLikeTweet(tweet._id)}
-                          className="flex items-center gap-2 text-gray-400 hover:text-red-400 transition duration-200 group"
-                        >
-                          <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill={tweet.isLiked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                          </svg>
-                          <span className="text-sm">{tweet.likesCount || 0}</span>
-                        </button>
+                    {editingTweet === tweet._id ? (
+                      <div className="mt-2">
+                        <textarea
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          className="w-full resize-none rounded-md border border-gray-700 px-3 py-2 text-white outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-900/40"
+                          rows="3"
+                        />
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            onClick={() => handleUpdateTweet(tweet._id)}
+                            className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingTweet(null);
+                              setEditContent('');
+                            }}
+                            className="rounded-md border border-gray-700 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-800"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="mt-1 whitespace-pre-wrap text-gray-100">{tweet.content}</p>
 
-                        <button className="flex items-center gap-2 text-gray-400 hover:text-blue-400 transition duration-200 group">
-                          <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                          </svg>
-                          <span className="text-sm">{tweet.commentsCount || 0}</span>
-                        </button>
+                        <div className="mt-3 flex w-full flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-4">
+                          <button className="flex items-center gap-1 text-gray-400 transition hover:text-emerald-400">
+                            <span className="rounded-full p-2 hover:bg-emerald-900/20">C</span>
+                            <span className="pr-2 text-xs">{tweet.commentsCount || 0}</span>
+                          </button>
 
-                        <button className="flex items-center gap-2 text-gray-400 hover:text-green-400 transition duration-200 group">
-                          <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                          </svg>
-                        </button>
+                          <button className="flex items-center gap-1 text-gray-400 transition hover:text-emerald-400">
+                            <span className="rounded-full p-2 hover:bg-emerald-900/20">R</span>
+                            <span className="pr-2 text-xs">0</span>
+                          </button>
 
-                        {/* Only show edit/delete for own tweets */}
+                          <button
+                            onClick={() => handleLikeTweet(tweet._id)}
+                            className="flex items-center gap-1 text-gray-400 transition hover:text-emerald-400"
+                          >
+                            <span className="rounded-full p-2 hover:bg-emerald-900/20">H</span>
+                            <span className="pr-2 text-xs">{tweet.likesCount || 0}</span>
+                          </button>
+
+                          <button className="flex items-center gap-1 text-gray-400 transition hover:text-emerald-400">
+                            <span className="rounded-full p-2 hover:bg-emerald-900/20">S</span>
+                          </button>
+                        </div>
+
                         {currentUser?._id === tweet.owner?._id && (
-                          <div className="ml-auto flex gap-2">
+                          <div className="mt-3 flex gap-2">
                             <button
-                              onClick={() => setEditingTweet(tweet._id)}
-                              className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-full transition duration-200"
-                              title="Edit"
+                              onClick={() => {
+                                setEditingTweet(tweet._id);
+                                setEditContent(tweet.content || '');
+                              }}
+                              className="rounded-md border border-gray-700 px-3 py-1.5 text-xs text-gray-200 hover:bg-gray-800"
                             >
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
-                              </svg>
+                              Edit
                             </button>
                             <button
                               onClick={() => handleDeleteTweet(tweet._id)}
-                              className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-full transition duration-200"
-                              title="Delete"
+                              className="rounded-md border border-gray-700 px-3 py-1.5 text-xs text-gray-200 hover:bg-emerald-900/20 hover:text-emerald-300"
                             >
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/>
-                              </svg>
+                              Delete
                             </button>
                           </div>
                         )}
-                      </div>
-                    </>
-                  )}
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
-          )) : !loading && (
-            <div className="text-center py-20">
-              <svg className="w-24 h-24 mx-auto mb-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"/>
-                <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"/>
-              </svg>
-              <h3 className="text-xl font-semibold text-gray-400 mb-2">No tweets yet</h3>
-              <p className="text-gray-500">Be the first to tweet something!</p>
+              </article>
+            ))
+          ) : (
+            <div className="w-full py-16 text-center">
+              <h3 className="text-lg font-semibold text-gray-200 mb-1">No posts yet</h3>
+              <p className="text-gray-400">Be the first to post something in the community.</p>
             </div>
           )}
-        </div>
+
+        </main>
+
+        <aside className="sticky top-20 hidden w-80 flex-none flex-col gap-4 lg:flex">
+          <div className="overflow-hidden rounded-xl border border-gray-800 bg-gray-900 shadow-sm">
+            <div className="px-4 py-3 text-lg font-semibold text-white">Trending Now</div>
+            {trendingItems.map((item, idx) => (
+              <button key={item.id} className="w-full px-4 py-3 text-left hover:bg-gray-950 transition-colors">
+                <div className="text-xs text-gray-400">{idx + 1}  {item.label}</div>
+                <div className="font-semibold text-white">{item.tag}</div>
+                <div className="text-xs text-gray-400">{item.posts}</div>
+              </button>
+            ))}
+            <button className="w-full px-4 py-3 text-left text-emerald-400 hover:bg-gray-950">Show more</button>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-gray-800 bg-gray-900 shadow-sm">
+            <div className="px-4 py-3 text-lg font-semibold text-white">Suggested Creators</div>
+            {suggestedCreators.map((creator) => (
+              <div key={creator.id} className="flex w-full items-center justify-between px-4 py-3 hover:bg-gray-950 transition-colors">
+                <div className="flex items-center gap-2">
+                  <img className="h-10 w-10 rounded-full object-cover" src={creator.avatar} alt={creator.name} />
+                  <div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-semibold text-white">{creator.name}</span>
+                      {creator.verified && <span className="text-xs text-emerald-400">v</span>}
+                    </div>
+                    <span className="text-xs text-gray-400">{creator.username}</span>
+                  </div>
+                </div>
+                <button className="rounded-md border border-gray-700 px-3 py-1 text-sm text-gray-200 hover:bg-gray-800">Follow</button>
+              </div>
+            ))}
+            <button className="w-full px-4 py-3 text-left text-emerald-400 hover:bg-gray-950">Show more</button>
+          </div>
+
+          <div className="flex flex-wrap items-start gap-x-3 gap-y-1 px-1">
+            <span className="cursor-pointer text-xs text-gray-400 hover:underline">Terms of Service</span>
+            <span className="cursor-pointer text-xs text-gray-400 hover:underline">Privacy Policy</span>
+            <span className="cursor-pointer text-xs text-gray-400 hover:underline">Cookie Policy</span>
+            <span className="cursor-pointer text-xs text-gray-400 hover:underline">Accessibility</span>
+            <span className="cursor-pointer text-xs text-gray-400 hover:underline">Ads info</span>
+            <span className="text-xs text-gray-400"> 2024 StreamVid Corp.</span>
+          </div>
+        </aside>
       </div>
     </div>
   );
 }
+
+

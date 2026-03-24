@@ -7,7 +7,7 @@ export default function EditProfile() {
   const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
     fullName: '',
-    email: ''
+    email: '',
   });
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
@@ -18,12 +18,11 @@ export default function EditProfile() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    // Load user data from localStorage
     const userData = JSON.parse(localStorage.getItem('user') || '{}');
     setUser(userData);
     setFormData({
       fullName: userData.fullname || '',
-      email: userData.email || ''
+      email: userData.email || '',
     });
     if (userData.avatar) {
       setAvatarPreview(userData.avatar);
@@ -35,9 +34,9 @@ export default function EditProfile() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -70,7 +69,6 @@ export default function EditProfile() {
     setError('');
     setSuccess('');
 
-    // Validation
     if (!formData.fullName.trim()) {
       setError('Full name is required');
       return;
@@ -84,7 +82,12 @@ export default function EditProfile() {
       return;
     }
 
-    if (!avatarFile && !coverFile && formData.fullName === user.fullname && formData.email === user.email) {
+    if (
+      !avatarFile &&
+      !coverFile &&
+      formData.fullName === user?.fullname &&
+      formData.email === user?.email
+    ) {
       setError('Please make changes to your profile');
       return;
     }
@@ -92,22 +95,19 @@ export default function EditProfile() {
     try {
       setLoading(true);
 
-      // Update account details (fullname and email)
-      if (formData.fullName !== user.fullname || formData.email !== user.email) {
+      if (formData.fullName !== user?.fullname || formData.email !== user?.email) {
         await updateAccountDetails({
           fullname: formData.fullName,
-          email: formData.email
+          email: formData.email,
         });
       }
 
-      // Update avatar if selected
       if (avatarFile) {
         const formDataAvatar = new FormData();
         formDataAvatar.append('avatar', avatarFile);
         await updateUserAvatar(formDataAvatar);
       }
 
-      // Update cover image if selected
       if (coverFile) {
         const formDataCover = new FormData();
         formDataCover.append('coverImage', coverFile);
@@ -127,156 +127,124 @@ export default function EditProfile() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="h-14 w-14 animate-spin rounded-full border-4 border-gray-700 border-t-emerald-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 py-8">
-      <div className="max-w-2xl mx-auto px-4">
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Edit Profile</h1>
-            <p className="text-gray-400">Update your profile information, avatar and cover image</p>
+    <div className="min-h-screen bg-black py-8 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-3xl">
+        <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6 shadow-sm sm:p-8">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-white">Edit Profile</h1>
+            <p className="mt-1 text-sm text-gray-400">Update your details, avatar, and cover image</p>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-lg">
-              <p className="text-red-400 text-sm">{error}</p>
+            <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {error}
             </div>
           )}
 
           {success && (
-            <div className="mb-6 p-4 bg-green-500/10 border border-green-500/50 rounded-lg">
-              <p className="text-green-400 text-sm">{success}</p>
+            <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-400">
+              {success}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Full Name */}
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">
-                Full Name
-              </label>
+              <label className="mb-2 block text-sm font-medium text-gray-200">Full Name</label>
               <input
                 type="text"
                 name="fullName"
                 value={formData.fullName}
                 onChange={handleInputChange}
                 placeholder="Enter your full name"
-                className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-700 px-4 py-2.5 text-gray-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
               />
             </div>
 
-            {/* Email */}
             <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">
-                Email Address
-              </label>
+              <label className="mb-2 block text-sm font-medium text-gray-200">Email Address</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
                 placeholder="Enter your email"
-                className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-700 px-4 py-2.5 text-gray-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
               />
             </div>
 
-            {/* Avatar Upload */}
             <div>
-              <label className="block text-gray-400 text-sm font-medium mb-4">
-                Avatar
-              </label>
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-32 h-32 rounded-full border-2 border-gray-600 overflow-hidden bg-gray-700 flex items-center justify-center">
-                  {avatarPreview ? (
-                    <img
-                      src={avatarPreview}
-                      alt="Avatar preview"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <svg className="w-12 h-12 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </div>
-                <label className="cursor-pointer">
-                  <div className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200">
-                    Choose Avatar
+              <label className="mb-2 block text-sm font-medium text-gray-200">Avatar</label>
+              <div className="rounded-xl border border-gray-800 bg-black p-4">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border border-gray-700 bg-gray-900">
+                    {avatarPreview ? (
+                      <img src={avatarPreview} alt="Avatar preview" className="h-full w-full object-cover" />
+                    ) : (
+                      <svg className="h-10 w-10 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                      </svg>
+                    )}
                   </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    className="hidden"
-                  />
-                </label>
-                {avatarFile && (
-                  <p className="text-gray-400 text-sm">{avatarFile.name}</p>
-                )}
+                  <label className="cursor-pointer rounded-lg border border-gray-700 px-3 py-1.5 text-sm font-semibold text-gray-200 hover:bg-gray-800">
+                    Choose avatar
+                    <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+                  </label>
+                  {avatarFile && <p className="text-xs text-gray-400">{avatarFile.name}</p>}
+                </div>
               </div>
             </div>
 
-            {/* Cover Image Upload */}
             <div>
-              <label className="block text-gray-400 text-sm font-medium mb-4">
-                Cover Image
-              </label>
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-full h-40 rounded-lg border-2 border-gray-600 overflow-hidden bg-gray-700 flex items-center justify-center">
+              <label className="mb-2 block text-sm font-medium text-gray-200">Cover Image</label>
+              <div className="rounded-xl border border-gray-800 bg-black p-4">
+                <div className="h-40 overflow-hidden rounded-lg border border-gray-700 bg-gray-900">
                   {coverPreview ? (
-                    <img
-                      src={coverPreview}
-                      alt="Cover preview"
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={coverPreview} alt="Cover preview" className="h-full w-full object-cover" />
                   ) : (
-                    <svg className="w-16 h-16 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-                    </svg>
+                    <div className="flex h-full items-center justify-center">
+                      <svg className="h-12 w-12 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                      </svg>
+                    </div>
                   )}
                 </div>
-                <label className="cursor-pointer">
-                  <div className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200">
-                    Choose Cover Image
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleCoverChange}
-                    className="hidden"
-                  />
+                <label className="mt-3 inline-block cursor-pointer rounded-lg border border-gray-700 px-3 py-1.5 text-sm font-semibold text-gray-200 hover:bg-gray-800">
+                  Choose cover image
+                  <input type="file" accept="image/*" onChange={handleCoverChange} className="hidden" />
                 </label>
-                {coverFile && (
-                  <p className="text-gray-400 text-sm">{coverFile.name}</p>
-                )}
+                {coverFile && <p className="mt-2 text-xs text-gray-400">{coverFile.name}</p>}
               </div>
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Updating Profile...' : 'Update Profile'}
-            </button>
+            <div className="flex flex-col gap-3 pt-1 sm:flex-row">
+              <button
+                type="submit"
+                disabled={loading}
+                className="rounded-lg bg-emerald-600 px-4 py-2.5 font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? 'Updating Profile...' : 'Update Profile'}
+              </button>
 
-            {/* Cancel Button */}
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard')}
-              className="w-full bg-gray-700 text-white font-semibold py-3 rounded-lg hover:bg-gray-600 transition duration-200"
-            >
-              Cancel
-            </button>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                className="rounded-lg border border-gray-700 px-4 py-2.5 font-semibold text-gray-200 transition hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+            </div>
           </form>
         </div>
       </div>
     </div>
   );
 }
+
+

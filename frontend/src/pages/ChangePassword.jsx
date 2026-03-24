@@ -13,12 +13,25 @@ export default function ChangePassword() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const passwordChecks = {
+    minLength: formData.newPassword.length >= 6,
+    differentFromCurrent:
+      formData.oldPassword.length > 0 &&
+      formData.newPassword.length > 0 &&
+      formData.oldPassword !== formData.newPassword,
+    matchesConfirm:
+      formData.confirmPassword.length > 0 &&
+      formData.newPassword === formData.confirmPassword,
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+    setError('');
+    setSuccess('');
   };
 
   const handleSubmit = async (e) => {
@@ -71,96 +84,98 @@ export default function ChangePassword() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Change Password</h1>
-            <p className="text-gray-400">Update your account password</p>
+    <div className="min-h-screen bg-black px-4 py-10 sm:px-6">
+      <div className="mx-auto w-full max-w-lg">
+        <section className="overflow-hidden rounded-2xl border border-gray-800 bg-gray-900/95 shadow-xl">
+          <div className="border-b border-gray-800 bg-black/40 px-6 py-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-400">Account Security</p>
+            <h1 className="mt-1 text-2xl font-semibold text-white">Change Password</h1>
+            <p className="mt-1 text-sm text-gray-400">Update your account password.</p>
           </div>
 
-          {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-lg">
-              <p className="text-red-400 text-sm">{error}</p>
+          <div className="px-6 py-6">
+            {error && (
+              <div className="mb-4 rounded-lg border border-red-800/60 bg-red-900/20 px-4 py-3 text-sm text-red-300">
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="mb-4 rounded-lg border border-emerald-700/60 bg-emerald-900/20 px-4 py-3 text-sm text-emerald-300">
+                {success}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-200" htmlFor="oldPassword">Current Password</label>
+                <input
+                  id="oldPassword"
+                  type="password"
+                  name="oldPassword"
+                  value={formData.oldPassword}
+                  onChange={handleChange}
+                  placeholder="Enter your current password"
+                  className="w-full rounded-lg border border-gray-700 bg-black/60 px-3 py-2.5 text-gray-100 outline-none placeholder:text-gray-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-900/40"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-200" htmlFor="newPassword">New Password</label>
+                <input
+                  id="newPassword"
+                  type="password"
+                  name="newPassword"
+                  value={formData.newPassword}
+                  onChange={handleChange}
+                  placeholder="Enter new password"
+                  className="w-full rounded-lg border border-gray-700 bg-black/60 px-3 py-2.5 text-gray-100 outline-none placeholder:text-gray-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-900/40"
+                />
+              </div>
+
+              <div className="rounded-lg border border-gray-800 bg-black/50 px-4 py-3">
+                <p className={`text-sm ${passwordChecks.minLength ? 'text-emerald-300' : 'text-gray-400'}`}>
+                  {passwordChecks.minLength ? '✓' : '•'} At least 6 characters
+                </p>
+                <p className={`mt-1 text-sm ${passwordChecks.differentFromCurrent ? 'text-emerald-300' : 'text-gray-400'}`}>
+                  {passwordChecks.differentFromCurrent ? '✓' : '•'} Different from current password
+                </p>
+                <p className={`mt-1 text-sm ${passwordChecks.matchesConfirm ? 'text-emerald-300' : 'text-gray-400'}`}>
+                  {passwordChecks.matchesConfirm ? '✓' : '•'} Matches confirmation password
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-200" htmlFor="confirmPassword">Confirm New Password</label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Confirm new password"
+                  className="w-full rounded-lg border border-gray-700 bg-black/60 px-3 py-2.5 text-gray-100 outline-none placeholder:text-gray-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-900/40"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? 'Changing Password...' : 'Change Password'}
+              </button>
+            </form>
+
+            <div className="mt-5 text-center">
+              <Link to="/dashboard" className="text-sm font-medium text-emerald-400 hover:text-emerald-300">
+                Back to Dashboard
+              </Link>
             </div>
-          )}
-
-          {success && (
-            <div className="mb-6 p-4 bg-green-500/10 border border-green-500/50 rounded-lg">
-              <p className="text-green-400 text-sm">{success}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Current Password */}
-            <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">
-                Current Password
-              </label>
-              <input
-                type="password"
-                name="oldPassword"
-                value={formData.oldPassword}
-                onChange={handleChange}
-                placeholder="Enter your current password"
-                className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* New Password */}
-            <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">
-                New Password
-              </label>
-              <input
-                type="password"
-                name="newPassword"
-                value={formData.newPassword}
-                onChange={handleChange}
-                placeholder="Enter new password (min 6 characters)"
-                className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              />
-              <p className="text-gray-500 text-xs mt-1">
-                Must be at least 6 characters long
-              </p>
-            </div>
-
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">
-                Confirm New Password
-              </label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="Confirm new password"
-                className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Changing Password...' : 'Change Password'}
-            </button>
-          </form>
-
-          {/* Back Button */}
-          <div className="mt-6 text-center">
-            <Link
-              to="/dashboard"
-              className="text-purple-400 hover:text-purple-300 text-sm transition duration-200"
-            >
-              Back to Dashboard
-            </Link>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
 }
+

@@ -1,19 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
 // Inline placeholders to avoid external DNS failures
 const PLACEHOLDER_RELATED = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='90'><rect width='160' height='90' fill='%23222'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23aaa' font-family='Arial' font-size='14'>Video</text></svg>";
 const PLACEHOLDER_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' rx='20' ry='20' fill='%23333'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23bbb' font-family='Arial' font-size='12'>U</text></svg>";
-import { 
-  getVideoById, 
-  toggleVideoLike, 
-  getVideoComments, 
+
+import {
+  getVideoById,
+  toggleVideoLike,
+  getVideoComments,
   addComment,
   deleteComment,
   toggleSubscription,
   getUserPlaylists,
   addVideoToPlaylist,
-  addToWatchHistory
+  addToWatchHistory,
+  getAllVideos,
 } from '../api/api';
 
 export default function VideoDetail() {
@@ -31,9 +33,19 @@ export default function VideoDetail() {
   const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
   const [addingPlaylistId, setAddingPlaylistId] = useState('');
   const [playlistMessage, setPlaylistMessage] = useState('');
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [commentsSort, setCommentsSort] = useState('Top comments');
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [relatedVideos, setRelatedVideos] = useState([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const videoRef = useRef(null);
+  const actionMenuRef = useRef(null);
+  const sortMenuRef = useRef(null);
+  const playlistPanelRef = useRef(null);
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
-  // Format duration from seconds to MM:SS
   const formatDuration = (seconds) => {
     if (!seconds) return '0:00';
     const mins = Math.floor(seconds / 60);
@@ -41,9 +53,33 @@ export default function VideoDetail() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const formatCompactNumber = (value) => {
+    const numeric = Number(value || 0);
+    if (numeric >= 1000000) return `${(numeric / 1000000).toFixed(1)}M`;
+    if (numeric >= 1000) return `${(numeric / 1000).toFixed(1)}K`;
+    return `${numeric}`;
+  };
+
+  const formatDateLabel = (dateValue) => {
+    if (!dateValue) return 'Recently';
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return 'Recently';
+
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const days = Math.floor(diffMs / dayMs);
+
+    if (days <= 0) return 'Today';
+    if (days === 1) return '1 day ago';
+    if (days < 30) return `${days} days ago`;
+    return date.toLocaleDateString();
+  };
+
   useEffect(() => {
     fetchVideo();
     fetchComments();
+    fetchRelatedVideos();
   }, [videoId]);
 
   useEffect(() => {
@@ -51,6 +87,23 @@ export default function VideoDetail() {
       loadPlaylists();
     }
   }, [currentUser?._id]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target)) {
+        setShowActionMenu(false);
+      }
+      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target)) {
+        setShowSortMenu(false);
+      }
+      if (playlistPanelRef.current && !playlistPanelRef.current.contains(event.target)) {
+        setIsPlaylistOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   const fetchVideo = async () => {
     try {
@@ -60,13 +113,11 @@ export default function VideoDetail() {
       setIsLiked(videoData?.isLiked || false);
       setLikesCount(videoData?.likesCount || 0);
       setIsSubscribed(videoData?.owner?.isSubscribed || false);
-      
-      // Add video to watch history
+
       try {
         await addToWatchHistory(videoId);
       } catch (error) {
         console.error('Error adding to watch history:', error);
-        // Don't throw error, just log it
       }
     } catch (error) {
       console.error('Error fetching video:', error);
@@ -78,7 +129,6 @@ export default function VideoDetail() {
   const fetchComments = async () => {
     try {
       const response = await getVideoComments(videoId);
-      // Try multiple possible locations for comments data
       let commentsData = [];
       if (response.data?.data?.docs) {
         commentsData = response.data.data.docs;
@@ -89,7 +139,7 @@ export default function VideoDetail() {
       } else if (Array.isArray(response.data)) {
         commentsData = response.data;
       }
-      
+
       setComments(Array.isArray(commentsData) ? commentsData : []);
     } catch (error) {
       console.error('Error fetching comments:', error);
@@ -97,13 +147,25 @@ export default function VideoDetail() {
     }
   };
 
+  const fetchRelatedVideos = async () => {
+    try {
+      setRelatedLoading(true);
+      const response = await getAllVideos({ sortBy: 'latest' });
+      const videosData = response.data?.data?.docs || response.data?.docs || response.data?.data || [];
+      const list = Array.isArray(videosData) ? videosData : [];
+      setRelatedVideos(list.filter((item) => item?._id && item._id !== videoId));
+    } catch (error) {
+      console.error('Error loading related videos:', error);
+      setRelatedVideos([]);
+    } finally {
+      setRelatedLoading(false);
+    }
+  };
+
   const loadPlaylists = async () => {
     try {
       const response = await getUserPlaylists(currentUser._id);
-      // Handle the nested response structure: data.playlists
-      const data = response.data?.data?.playlists || 
-                   response.data?.playlists || 
-                   response.data?.data || [];
+      const data = response.data?.data?.playlists || response.data?.playlists || response.data?.data || [];
       setPlaylists(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching playlists:', error);
@@ -122,25 +184,20 @@ export default function VideoDetail() {
   };
 
   const handleSubscribe = async () => {
-    if (!currentUser?.accessToken) {
-      return;
-    }
-    if (currentUser?._id && video?.owner?._id && currentUser._id === video.owner._id) {
-      // Prevent self-subscription
-      return;
-    }
+    if (!currentUser?.accessToken) return;
+    if (currentUser?._id && video?.owner?._id && currentUser._id === video.owner._id) return;
+
     try {
       const response = await toggleSubscription(video.owner._id);
       const newSubscribedStatus = response.data?.data?.isSubscribed;
       if (typeof newSubscribedStatus === 'boolean') {
         setIsSubscribed(newSubscribedStatus);
-        // Also update the video object
-        setVideo(prev => ({
+        setVideo((prev) => ({
           ...prev,
           owner: {
             ...prev.owner,
-            isSubscribed: newSubscribedStatus
-          }
+            isSubscribed: newSubscribedStatus,
+          },
         }));
       }
     } catch (error) {
@@ -154,10 +211,29 @@ export default function VideoDetail() {
       return;
     }
     if (!playlistId || !video?._id) return;
+
+    const selectedPlaylist = playlists.find((pl) => pl?._id === playlistId);
+    if (isVideoAlreadyInPlaylist(selectedPlaylist, video._id)) {
+      setPlaylistMessage('Already in playlist');
+      setTimeout(() => setPlaylistMessage(''), 2000);
+      return;
+    }
+
     try {
       setAddingPlaylistId(playlistId);
       setPlaylistMessage('');
       await addVideoToPlaylist(video._id, playlistId);
+      setPlaylists((prev) =>
+        prev.map((pl) => {
+          if (pl?._id !== playlistId) return pl;
+
+          const existingVideos = Array.isArray(pl?.videos) ? pl.videos : [];
+          return {
+            ...pl,
+            videos: [...existingVideos, { _id: video._id }],
+          };
+        })
+      );
       setPlaylistMessage('Added to playlist');
       setTimeout(() => setPlaylistMessage(''), 2000);
     } catch (error) {
@@ -165,7 +241,6 @@ export default function VideoDetail() {
       setPlaylistMessage(error.response?.data?.message || 'Failed to add to playlist');
     } finally {
       setAddingPlaylistId('');
-      setIsPlaylistOpen(false);
     }
   };
 
@@ -197,164 +272,238 @@ export default function VideoDetail() {
     }
   };
 
+  const handlePlayClick = async () => {
+    try {
+      if (videoRef.current) {
+        await videoRef.current.play();
+      }
+    } catch (error) {
+      console.error('Error starting playback:', error);
+    }
+  };
+
+  const sortedComments = [...comments].sort((a, b) => {
+    if (commentsSort === 'Newest first') {
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    }
+    return new Date(a.createdAt) - new Date(b.createdAt);
+  });
+
+  const isVideoAlreadyInPlaylist = (playlist, currentVideoId) => {
+    if (!playlist || !currentVideoId) return false;
+    const videos = Array.isArray(playlist.videos) ? playlist.videos : [];
+    const targetId = String(currentVideoId);
+
+    const normalizeId = (value) => {
+      if (!value) return '';
+      if (typeof value === 'string') return value;
+      if (typeof value === 'number') return String(value);
+      if (typeof value === 'object') {
+        if (value._id) return normalizeId(value._id);
+        if (value.video) return normalizeId(value.video);
+        if (value.videoId) return normalizeId(value.videoId);
+        if (value.$oid) return String(value.$oid);
+        if (typeof value.toString === 'function') {
+          const converted = value.toString();
+          if (converted && converted !== '[object Object]') return converted;
+        }
+      }
+      return '';
+    };
+
+    return videos.some((item) => {
+      const normalized = normalizeId(item);
+      return normalized === targetId;
+    });
+  };
+
+  const isSavedInAnyPlaylist = Array.isArray(playlists)
+    ? playlists.some((playlist) => isVideoAlreadyInPlaylist(playlist, video?._id))
+    : false;
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-14 w-14 border-t-2 border-b-2 border-emerald-500"></div>
       </div>
     );
   }
 
   if (!video) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-white mb-4">Video not found</h2>
-          <Link to="/" className="text-purple-400 hover:text-purple-300">Go back home</Link>
+          <Link to="/" className="text-emerald-400 hover:text-emerald-300">Go back home</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2">
-            {/* Video Player */}
-            <div className="bg-black rounded-lg overflow-hidden aspect-video mb-4">
+    <div className="min-h-screen w-full bg-black">
+      <div className="mx-auto flex w-full max-w-7xl gap-0">
+        <div className="w-full lg:w-[calc(100%-384px)] px-6 py-6 sm:px-4">
+          <div className="w-full flex flex-col gap-4">
+            <div className="relative w-full overflow-hidden rounded-lg bg-black aspect-video border border-gray-800">
               <video
+                ref={videoRef}
                 controls
                 className="w-full h-full"
                 poster={video.thumbnail}
                 src={video.videoFile}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onEnded={() => setIsPlaying(false)}
               >
                 Your browser does not support the video tag.
               </video>
+
+              {!isPlaying && (
+                <button
+                  type="button"
+                  onClick={handlePlayClick}
+                  className="absolute inset-0 m-auto h-16 w-16 rounded-full bg-black/60 border border-emerald-500/60 text-emerald-400 flex items-center justify-center hover:bg-emerald-900/30 hover:text-emerald-300 transition"
+                  aria-label="Play video"
+                >
+                  <svg className="h-8 w-8" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M6 4l10 6-10 6V4z" />
+                  </svg>
+                </button>
+              )}
             </div>
 
-            {/* Video Info */}
-            <div className="bg-gray-800 rounded-lg p-6 mb-4">
-              <h1 className="text-2xl font-bold text-white mb-4">{video.title}</h1>
-              
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                <div className="flex items-center gap-4 text-gray-400">
-                  <span className="flex items-center gap-1">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                      <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/>
-                    </svg>
-                    {video.views || 0} views
-                  </span>
-                  <span>•</span>
-                  <span>{formatDuration(video.duration)} runtime</span>
-                  <span>•</span>
-                  <span>{new Date(video.createdAt).toLocaleDateString()}</span>
+            <div className="w-full flex flex-col gap-4">
+              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">{video.title || 'Untitled video'}</h1>
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400">
+                  <span className="rounded-full border border-gray-800 bg-gray-900 px-2.5 py-1">{formatCompactNumber(video.views)} views</span>
+                  <span className="text-gray-600">•</span>
+                  <span>{formatDateLabel(video.createdAt)}</span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={handleLike}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full transition duration-200 ${
-                      isLiked
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition ${
+                      isLiked ? 'bg-emerald-600 text-white' : 'bg-gray-900 text-gray-200 hover:bg-emerald-900/30 hover:text-emerald-300'
                     }`}
                   >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z"/>
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M2 21h4V9H2v12zm20-11c0-1.1-.9-2-2-2h-6.3l1-4.8.03-.32c0-.41-.17-.79-.44-1.06L13 1 6.59 7.41C6.22 7.78 6 8.3 6 8.83V19c0 1.1.9 2 2 2h9c.82 0 1.53-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
                     </svg>
-                    {likesCount} Like{likesCount !== 1 ? 's' : ''}
+                    <span>{formatCompactNumber(likesCount)}</span>
+                  </button>
+                  <button className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-900 text-gray-200 hover:bg-emerald-900/30 hover:text-emerald-300 text-sm">
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7a2.5 2.5 0 000-1.39l7-4.11A3 3 0 1014 5a2.9 2.9 0 00.04.49l-7 4.12a3 3 0 100 4.78l7.05 4.14A2.9 2.9 0 0014 19a3 3 0 103-2.92z" />
+                    </svg>
+                    <span>Share</span>
+                  </button>
+                  <button
+                    onClick={() => setIsPlaylistOpen((prev) => !prev)}
+                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition ${
+                      isSavedInAnyPlaylist
+                        ? 'bg-emerald-700/20 border border-emerald-700/40 text-emerald-300 hover:bg-emerald-700/30'
+                        : 'bg-gray-900 text-gray-200 hover:bg-emerald-900/30 hover:text-emerald-300'
+                    }`}
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M17 3H5a2 2 0 00-2 2v16l8-3.5L19 21V5a2 2 0 00-2-2z" />
+                    </svg>
+                    <span>{isSavedInAnyPlaylist ? 'Added to playlist' : 'Add to playlist'}</span>
                   </button>
 
-                  <button className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-gray-300 rounded-full hover:bg-gray-600 transition duration-200">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"/>
-                    </svg>
-                    Share
-                  </button>
-
-                  <button className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-gray-300 rounded-full hover:bg-gray-600 transition duration-200">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"/>
-                    </svg>
-                    Save
-                  </button>
-
-                  <div className="relative">
+                  <div className="relative" ref={actionMenuRef}>
                     <button
-                      onClick={() => setIsPlaylistOpen((prev) => !prev)}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-gray-300 rounded-full hover:bg-gray-600 transition duration-200"
+                      onClick={() => setShowActionMenu((prev) => !prev)}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-900 text-gray-200 hover:bg-emerald-900/30 hover:text-emerald-300 text-sm"
                     >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M4 3a1 1 0 00-1 1v12a1 1 0 001.555.832L10 13.202l5.445 3.63A1 1 0 0017 16V4a1 1 0 00-1-1H4z" />
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M12 8a2 2 0 110-4 2 2 0 010 4zm0 8a2 2 0 110-4 2 2 0 010 4zm0 8a2 2 0 110-4 2 2 0 010 4z" />
                       </svg>
-                      Add to playlist
+                      <span>More</span>
                     </button>
-                    {isPlaylistOpen && (
-                      <div className="absolute right-0 mt-2 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
-                        <div className="px-3 py-2 border-b border-gray-700 text-sm text-gray-300">Select playlist</div>
-                        <div className="max-h-64 overflow-y-auto">
-                          {Array.isArray(playlists) && playlists.length > 0 ? (
-                            playlists.map((pl) => (
-                              <button
-                                key={pl._id}
-                                onClick={() => handleAddToPlaylist(pl._id)}
-                                className="w-full text-left px-3 py-2 text-gray-200 hover:bg-gray-700 flex items-center justify-between"
-                                disabled={addingPlaylistId === pl._id}
-                              >
-                                <span className="truncate">{pl.name || 'Untitled playlist'}</span>
-                                {addingPlaylistId === pl._id && (
-                                  <svg className="w-4 h-4 animate-spin text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <circle cx="12" cy="12" r="10" opacity="0.25" />
-                                    <path d="M22 12a10 10 0 00-10-10" />
-                                  </svg>
-                                )}
-                              </button>
-                            ))
-                          ) : (
-                            <div className="px-3 py-3 text-sm text-gray-400">No playlists found</div>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => setIsPlaylistOpen(false)}
-                          className="w-full text-center px-3 py-2 text-sm text-gray-400 hover:text-gray-200 border-t border-gray-700"
-                        >
-                          Close
-                        </button>
+                    {showActionMenu && (
+                      <div className="absolute right-0 z-20 mt-2 w-44 rounded-lg border border-gray-800 bg-gray-900 shadow-lg p-2">
+                        <button className="w-full text-left rounded-md px-3 py-2 text-sm text-gray-200 hover:bg-emerald-900/30 hover:text-emerald-300">Share</button>
+                        <button className="w-full text-left rounded-md px-3 py-2 text-sm text-gray-200 hover:bg-emerald-900/30 hover:text-emerald-300">Save to playlist</button>
+                        <button className="w-full text-left rounded-md px-3 py-2 text-sm text-red-400 hover:bg-emerald-900/30">Report</button>
                       </div>
                     )}
                   </div>
                 </div>
-
-                {playlistMessage && (
-                  <div className="text-sm text-gray-300 mt-2">{playlistMessage}</div>
-                )}
               </div>
 
-              {/* Channel Info */}
-              <div className="flex items-center justify-between pt-4 border-t border-gray-700">
-                <Link to={`/channel/${video.owner?.username}`} className="flex items-center gap-4 group">
+              {isPlaylistOpen && (
+                <div ref={playlistPanelRef} className="rounded-lg border border-gray-800 bg-gray-900 p-2">
+                  <div className="text-sm text-gray-300 px-2 py-1">Select playlist</div>
+                  <div className="max-h-56 overflow-y-auto">
+                    {Array.isArray(playlists) && playlists.length > 0 ? (
+                      playlists.map((pl) => {
+                        const alreadyInPlaylist = isVideoAlreadyInPlaylist(pl, video?._id);
+                        return (
+                          <button
+                            key={pl._id}
+                            onClick={() => handleAddToPlaylist(pl._id)}
+                            className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between ${
+                              alreadyInPlaylist
+                                ? 'text-emerald-300 bg-emerald-950/30 cursor-not-allowed'
+                                : 'text-gray-200 hover:bg-emerald-900/30 hover:text-emerald-300'
+                            }`}
+                            disabled={addingPlaylistId === pl._id || alreadyInPlaylist}
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate">{pl.name || 'Untitled playlist'}</span>
+                              <span className={`block text-[11px] ${alreadyInPlaylist ? 'text-emerald-400' : 'text-gray-500'}`}>
+                                {alreadyInPlaylist ? 'Already in playlist' : 'Tap to add'}
+                              </span>
+                            </span>
+                            {addingPlaylistId === pl._id ? (
+                              <svg className="w-4 h-4 animate-spin text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10" opacity="0.25" />
+                                <path d="M22 12a10 10 0 00-10-10" />
+                              </svg>
+                            ) : alreadyInPlaylist ? (
+                              <span className="rounded-full border border-emerald-700/50 px-2 py-0.5 text-[11px] font-medium text-emerald-300">
+                                Already in playlist
+                              </span>
+                            ) : null}
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-gray-500">No playlists found</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {playlistMessage && <div className="text-sm text-emerald-400">{playlistMessage}</div>}
+            </div>
+
+            <div className="w-full rounded-lg border border-gray-800 bg-gray-900 p-5">
+              <div className="flex items-center justify-between">
+                <Link to={`/channel/${video.owner?.username}`} className="flex items-center gap-3">
                   <img
                     src={video.owner?.avatar || PLACEHOLDER_AVATAR}
-                    alt={video.owner?.username}
-                    className="w-12 h-12 rounded-full"
+                    alt={video.owner?.username || 'Creator avatar'}
+                    className="h-12 w-12 rounded-full object-cover"
                   />
                   <div>
-                    <h3 className="text-white font-semibold group-hover:text-purple-400 transition duration-200">
-                      {video.owner?.fullname || video.owner?.fullName || 'Unknown Creator'}
-                    </h3>
-                    <p className="text-gray-400 text-sm">{video.owner?.subscribersCount || 0} subscribers</p>
+                    <div className="font-semibold text-white">{video.owner?.fullname || video.owner?.fullName || 'Unknown Creator'}</div>
+                    <div className="text-sm text-gray-400">{video.owner?.subscribersCount || 0} subscribers</div>
                   </div>
                 </Link>
+
                 {currentUser?._id !== video.owner?._id && (
                   <button
                     onClick={handleSubscribe}
-                    className={`px-6 py-2 rounded-full font-semibold transition duration-200 ${
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
                       isSubscribed
-                        ? 'bg-gray-700 text-white hover:bg-gray-600'
-                        : 'bg-red-600 text-white hover:bg-red-700'
+                        ? 'bg-gray-800 text-gray-200 hover:bg-emerald-900/30 hover:text-emerald-300'
+                        : 'bg-emerald-600 text-white hover:bg-emerald-700'
                     }`}
                   >
                     {isSubscribed ? 'Subscribed' : 'Subscribe'}
@@ -362,89 +511,117 @@ export default function VideoDetail() {
                 )}
               </div>
 
-              {/* Description */}
-              <div className="mt-6">
-                <div className={`text-gray-300 ${showFullDescription ? '' : 'line-clamp-3'}`}>
+              <div className="mt-4 rounded-lg border border-gray-800 bg-black/40 p-4">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-400">Description</div>
+                <p className={`text-gray-300 ${showFullDescription ? '' : 'line-clamp-2'}`}>
                   {video.description || 'No description available.'}
-                </div>
+                </p>
                 <button
                   onClick={() => setShowFullDescription(!showFullDescription)}
-                  className="text-purple-400 text-sm mt-2 hover:text-purple-300"
+                  className="mt-2 text-sm text-emerald-400 hover:text-emerald-300"
                 >
                   {showFullDescription ? 'Show less' : 'Show more'}
                 </button>
               </div>
             </div>
 
-            {/* Comments Section */}
-            <div className="bg-gray-800 rounded-lg p-6">
-              <h2 className="text-xl font-bold text-white mb-6">{comments.length} Comments</h2>
-
-              {/* Add Comment */}
-              <form onSubmit={handleAddComment} className="mb-8">
-                <div className="flex gap-4">
-                  <img
-                    src={PLACEHOLDER_AVATAR}
-                    alt="Your avatar"
-                    className="w-10 h-10 rounded-full"
-                  />
-                  <div className="flex-1">
-                    <textarea
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Add a comment..."
-                      className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      rows="3"
-                    />
-                    <div className="flex justify-end gap-2 mt-2">
+            <div className="w-full border-t border-gray-800 pt-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-2xl font-semibold text-white">{comments.length} Comments</h2>
+                <div className="relative" ref={sortMenuRef}>
+                  <button
+                    onClick={() => setShowSortMenu((prev) => !prev)}
+                    className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-200 hover:bg-emerald-900/30 hover:text-emerald-300"
+                  >
+                    {commentsSort}
+                  </button>
+                  {showSortMenu && (
+                    <div className="absolute right-0 z-20 mt-2 w-40 rounded-lg border border-gray-800 bg-gray-900 p-2 shadow-lg">
                       <button
-                        type="button"
-                        onClick={() => setNewComment('')}
-                        className="px-4 py-2 text-gray-400 hover:text-white transition duration-200"
+                        onClick={() => {
+                          setCommentsSort('Top comments');
+                          setShowSortMenu(false);
+                        }}
+                        className="w-full rounded-md px-3 py-2 text-left text-sm text-gray-200 hover:bg-emerald-900/30 hover:text-emerald-300"
                       >
-                        Cancel
+                        Top comments
                       </button>
                       <button
-                        type="submit"
-                        disabled={!newComment.trim()}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
+                        onClick={() => {
+                          setCommentsSort('Newest first');
+                          setShowSortMenu(false);
+                        }}
+                        className="w-full rounded-md px-3 py-2 text-left text-sm text-gray-200 hover:bg-emerald-900/30 hover:text-emerald-300"
                       >
-                        Comment
+                        Newest first
                       </button>
                     </div>
+                  )}
+                </div>
+              </div>
+
+              <form onSubmit={handleAddComment} className="mb-6 flex items-start gap-3">
+                <img src={currentUser?.avatar || PLACEHOLDER_AVATAR} alt="Your avatar" className="h-10 w-10 rounded-full object-cover" />
+                <div className="flex-1">
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Add a comment..."
+                    className="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-gray-100 resize-none outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-900/40"
+                    rows="3"
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNewComment('')}
+                      className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-200 hover:bg-emerald-900/30 hover:text-emerald-300"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!newComment.trim()}
+                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Comment
+                    </button>
                   </div>
                 </div>
               </form>
-              {commentError && (
-                <div className="text-red-400 text-sm mb-4">{commentError}</div>
-              )}
 
-              {/* Comments List */}
+              {commentError && <div className="mb-4 text-sm text-red-400">{commentError}</div>}
+
               <div className="space-y-6">
-                {comments.map((comment) => (
-                  <div key={comment._id} className="flex gap-4">
+                {sortedComments.length === 0 && (
+                  <div className="rounded-lg border border-gray-800 bg-gray-900 p-6 text-center text-gray-400">
+                    No comments yet. Start the conversation.
+                  </div>
+                )}
+
+                {sortedComments.map((comment) => (
+                  <div key={comment._id} className="flex items-start gap-3 rounded-lg border border-gray-800 bg-gray-900/50 p-4">
                     <img
                       src={comment.owner?.avatar || PLACEHOLDER_AVATAR}
-                      alt={comment.owner?.username}
-                      className="w-10 h-10 rounded-full"
+                      alt={comment.owner?.username || 'User avatar'}
+                      className="h-10 w-10 rounded-full object-cover"
                     />
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-white font-semibold">{comment.owner?.username || 'Anonymous'}</span>
-                        <span className="text-gray-500 text-sm">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-white">{comment.owner?.username || 'Anonymous'}</span>
+                        <span className="text-xs text-gray-500">{formatDateLabel(comment.createdAt)}</span>
                       </div>
-                      <p className="text-gray-300 mb-2">{comment.content}</p>
-                      <div className="flex items-center gap-4">
-                        <button className="text-gray-400 hover:text-white text-sm transition duration-200">
-                          <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z"/>
+                      <p className="mt-1 text-gray-300">{comment.content}</p>
+                      <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
+                        <button className="inline-flex items-center gap-1 hover:text-emerald-300">
+                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M2 21h4V9H2v12zm20-11c0-1.1-.9-2-2-2h-6.3l1-4.8.03-.32c0-.41-.17-.79-.44-1.06L13 1 6.59 7.41C6.22 7.78 6 8.3 6 8.83V19c0 1.1.9 2 2 2h9c.82 0 1.53-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
                           </svg>
-                          {comment.likes || 0}
+                          <span>{comment.likes || 0}</span>
                         </button>
-                        <button className="text-gray-400 hover:text-white text-sm transition duration-200">Reply</button>
+                        <button className="hover:text-emerald-300">Reply</button>
                         <button
                           onClick={() => handleDeleteComment(comment._id)}
-                          className="text-red-400 hover:text-red-300 text-sm transition duration-200 ml-auto"
+                          className="ml-auto text-red-400 hover:text-emerald-300"
                         >
                           Delete
                         </button>
@@ -452,23 +629,51 @@ export default function VideoDetail() {
                     </div>
                   </div>
                 ))}
+
+                {sortedComments.length > 0 && (
+                  <button className="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-200 hover:bg-emerald-900/30 hover:text-emerald-300">
+                    Load more comments
+                  </button>
+                )}
               </div>
             </div>
           </div>
-
-          {/* Sidebar - Related Videos */}
-          <div className="lg:col-span-1">
-            <h3 className="text-white font-bold text-lg mb-4">Related Videos</h3>
-            <div className="bg-gray-800 rounded-lg p-8 text-center">
-              <svg className="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h4 className="text-gray-400 font-semibold mb-2">Related Videos Coming Soon</h4>
-              <p className="text-gray-500 text-sm">Related videos will appear once more content is available</p>
-            </div>
-          </div>
         </div>
+
+        <aside className="hidden lg:flex w-[384px] flex-col border-l border-gray-800 bg-black px-4 py-6">
+          <h3 className="text-xl font-semibold text-white mb-4">Up next</h3>
+
+          {relatedLoading ? (
+            <div className="text-sm text-gray-500">Loading videos...</div>
+          ) : relatedVideos.length > 0 ? (
+            <div className="space-y-4">
+              {relatedVideos.slice(0, 10).map((item) => (
+                <Link key={item._id} to={`/video/${item._id}`} className="flex items-start gap-3 cursor-pointer group">
+                  <div className="relative h-24 w-40 overflow-hidden rounded-md bg-gray-900 border border-gray-800">
+                    <img className="h-full w-full object-cover" src={item.thumbnail || PLACEHOLDER_RELATED} alt={item.title || 'Related video'} />
+                    <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1 py-0.5 text-[10px] font-semibold text-white">
+                      {formatDuration(item.duration)}
+                    </span>
+                    <span className="absolute inset-0 m-auto h-8 w-8 rounded-full bg-black/60 border border-emerald-500/50 text-emerald-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M6 4l10 6-10 6V4z" />
+                      </svg>
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="line-clamp-2 text-sm font-semibold text-gray-100 group-hover:text-emerald-300 transition">
+                      {item.title || 'Untitled video'}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">{item.owner?.username || 'Creator'}</p>
+                    <p className="text-xs text-gray-500">{item.views || 0} views  {new Date(item.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">No uploaded videos available.</div>
+          )}
+        </aside>
       </div>
     </div>
   );
