@@ -21,13 +21,12 @@ export default function Welcome() {
 
   useEffect(() => {
     fetchVideos();
-  }, [filter]);
+  }, []);
 
   const fetchVideos = async () => {
     try {
       setLoading(true);
-      const params = filter !== 'all' ? { sortBy: filter } : {};
-      const response = await getAllVideos(params);
+      const response = await getAllVideos({});
       const videosData = response.data?.data?.docs || response.data?.docs || response.data?.data || [];
       setVideos(Array.isArray(videosData) ? videosData : []);
     } catch (error) {
@@ -38,7 +37,7 @@ export default function Welcome() {
     }
   };
 
-  const filteredVideos = Array.isArray(videos)
+  const searchMatchedVideos = Array.isArray(videos)
     ? videos.filter(
         (video) =>
           video.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -46,7 +45,17 @@ export default function Welcome() {
       )
     : [];
 
-  const featuredVideos = filteredVideos.slice(0, 6);
+  const sortedVideos = [...searchMatchedVideos].sort((a, b) => {
+    if (filter === 'latest') {
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    }
+    if (filter === 'popular' || filter === 'trending') {
+      return Number(b.views || 0) - Number(a.views || 0);
+    }
+    return 0;
+  });
+
+  const featuredVideos = sortedVideos.slice(0, 6);
 
   const featureItems = [
     {
