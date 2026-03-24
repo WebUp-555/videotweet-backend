@@ -9,6 +9,7 @@ const PLACEHOLDER_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.or
 export default function Welcome() {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [requiresLogin, setRequiresLogin] = useState(false);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -24,13 +25,29 @@ export default function Welcome() {
   }, []);
 
   const fetchVideos = async () => {
+    const storedUser = localStorage.getItem('user');
+    const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+    const hasAccessToken = Boolean(parsedUser?.accessToken);
+
+    if (!hasAccessToken) {
+      setVideos([]);
+      setRequiresLogin(true);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
+      setRequiresLogin(false);
       const response = await getAllVideos({});
       const videosData = response.data?.data?.docs || response.data?.docs || response.data?.data || [];
       setVideos(Array.isArray(videosData) ? videosData : []);
     } catch (error) {
-      console.error('Error fetching videos:', error);
+      if (error.response?.status === 401) {
+        setRequiresLogin(true);
+      } else {
+        console.error('Error fetching videos:', error);
+      }
       setVideos([]);
     } finally {
       setLoading(false);
@@ -166,7 +183,13 @@ export default function Welcome() {
           ) : featuredVideos.length === 0 ? (
             <div className="home-empty-state">
               <h3>No videos found</h3>
-              <p>Try adjusting your search or filters.</p>
+              {requiresLogin ? (
+                <p>
+                  Please <Link to="/login" className="font-semibold text-emerald-400 hover:text-emerald-300 hover:underline">sign in</Link> to view videos.
+                </p>
+              ) : (
+                <p>Try adjusting your search or filters.</p>
+              )}
             </div>
           ) : (
             <div className="home-video-grid">
