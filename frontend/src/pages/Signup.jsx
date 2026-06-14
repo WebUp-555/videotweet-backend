@@ -289,27 +289,7 @@ export default function Signup() {
             </p>
           </div>
 
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-gray-800" />
-              <span className="text-xs text-gray-500">or continue with</span>
-              <div className="h-px flex-1 bg-gray-800" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                className="h-10 rounded-md border border-gray-700 bg-gray-900 px-4 text-sm font-medium text-gray-200 transition hover:bg-emerald-900/30 hover:text-emerald-300"
-              >
-                Google
-              </button>
-              <button
-                type="button"
-                className="h-10 rounded-md border border-gray-700 bg-gray-900 px-4 text-sm font-medium text-gray-200 transition hover:bg-emerald-900/30 hover:text-emerald-300"
-              >
-                GitHub
-              </button>
-            </div>
-          </div>
+          
         </form>
       </div>
 

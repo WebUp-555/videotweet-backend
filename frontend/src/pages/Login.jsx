@@ -138,28 +138,6 @@ export default function Login() {
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
 
-          <div className="space-y-4 pt-2">
-            <div className="flex w-full items-center gap-4">
-                <div className="h-px flex-1 bg-gray-800" />
-                <span className="text-xs text-gray-500">or continue with</span>
-                <div className="h-px flex-1 bg-gray-800" />
-            </div>
-            <div className="grid w-full grid-cols-2 gap-3">
-              <button
-                type="button"
-                  className="h-9 rounded-md border border-gray-700 bg-gray-900 px-4 text-sm font-medium text-gray-200 transition hover:bg-emerald-900/30 hover:text-emerald-300"
-              >
-                GitHub
-              </button>
-              <button
-                type="button"
-                  className="h-9 rounded-md border border-gray-700 bg-gray-900 px-4 text-sm font-medium text-gray-200 transition hover:bg-emerald-900/30 hover:text-emerald-300"
-              >
-                Google
-              </button>
-            </div>
-          </div>
-
           {error && (
             <div className="rounded-md border border-red-800/60 bg-red-900/20 px-4 py-3">
               <p className="text-sm font-semibold text-red-300">Invalid credentials</p>
