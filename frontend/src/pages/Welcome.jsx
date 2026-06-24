@@ -101,13 +101,6 @@ export default function Welcome() {
     },
   ];
 
-  const statItems = [
-    { value: '50M+', label: 'Active Users' },
-    { value: '2M+', label: 'Content Creators' },
-    { value: '10B+', label: 'Videos Watched' },
-    { value: '150+', label: 'Countries' },
-  ];
-
   const footerColumns = [
     {
       title: 'Explore',
@@ -236,23 +229,6 @@ export default function Welcome() {
                 <h3>{item.title}</h3>
                 <p>{item.text}</p>
               </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="home-section">
-        <div className="home-container">
-          <div className="home-section-title">
-            <p>BY THE NUMBERS</p>
-            <h2>Join a thriving community</h2>
-          </div>
-          <div className="home-stats-grid">
-            {statItems.map((item) => (
-              <div key={item.label} className="home-stat-item">
-                <strong>{item.value}</strong>
-                <span>{item.label}</span>
-              </div>
             ))}
           </div>
         </div>
